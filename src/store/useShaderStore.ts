@@ -23,12 +23,14 @@ interface ShaderState {
   sceneConfig: SceneConfig;
   isLoading: boolean;
   logs: string[];
+  lastError: string | null;
   
   setPrompt: (prompt: string) => void;
   setShaders: (vertex: string, fragment: string, uniforms: Uniform[], sceneConfig: SceneConfig) => void;
   updateUniform: (name: string, value: any) => void;
   setLoading: (loading: boolean) => void;
   addLog: (log: string) => void;
+  setLastError: (error: string | null) => void;
 }
 
 export const useShaderStore = create<ShaderState>((set) => ({
@@ -58,13 +60,15 @@ export const useShaderStore = create<ShaderState>((set) => ({
   },
   isLoading: false,
   logs: [],
+  lastError: null,
 
   setPrompt: (prompt) => set({ prompt }),
   setShaders: (vertex, fragment, uniforms, sceneConfig) => 
-    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneConfig }),
+    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneConfig, lastError: null }),
   updateUniform: (name, value) => set((state) => ({
     uniforms: state.uniforms.map(u => u.name === name ? { ...u, value } : u)
   })),
   setLoading: (isLoading) => set({ isLoading }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
+  setLastError: (lastError) => set({ lastError }),
 }));

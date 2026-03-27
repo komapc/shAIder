@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useShaderStore } from './store/useShaderStore';
@@ -7,7 +7,6 @@ import { useShaderStore } from './store/useShaderStore';
 /**
  * Scene Component
  * Renders a dynamic 3D object with a custom ShaderMaterial.
- * The material compiles GLSL code provided by the Zustand store.
  */
 const Scene: React.FC = () => {
   const { 
@@ -15,13 +14,31 @@ const Scene: React.FC = () => {
     fragmentShader, 
     uniforms, 
     sceneConfig,
-    addLog 
+    addLog,
+    setLastError
   } = useShaderStore();
   
+  const { gl } = useThree();
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  // Memoize uniforms to prevent unnecessary re-renders
+  // Intercept shader compilation errors
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('THREE.WebGLProgram: shader error:')) {
+        addLog("GLSL Error detected!");
+        setLastError(message);
+      }
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, [addLog, setLastError]);
+
+  // Memoize uniforms
   const memoizedUniforms = useMemo(() => {
     const formatted: { [key: string]: { value: any } } = {
       time: { value: 0 },
@@ -29,31 +46,22 @@ const Scene: React.FC = () => {
     };
     
     uniforms.forEach(u => {
-      formatted[u.name] = { value: u.value };
+      if (u.type === 'color') {
+        formatted[u.name] = { value: new THREE.Color(u.value) };
+      } else {
+        formatted[u.name] = { value: u.value };
+      }
     });
     
     return formatted;
   }, [uniforms]);
 
-  // Handle compilation errors
-  useEffect(() => {
-    if (materialRef.current) {
-      // Three.js doesn't throw on shader errors, we have to check the program
-      // But we can trigger a re-compilation check here if needed.
-    }
-  }, [vertexShader, fragmentShader]);
-
-  // Animation Loop
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uniforms.time.value = state.clock.getElapsedTime();
     }
-    if (meshRef.current && sceneConfig.objectType === 'sphere') {
-       // Optional: Add some default movement if needed
-    }
   });
 
-  // Geometry selector based on AI sceneConfig
   const geometry = useMemo(() => {
     switch (sceneConfig.objectType.toLowerCase()) {
       case 'box':
@@ -75,7 +83,6 @@ const Scene: React.FC = () => {
       <PerspectiveCamera makeDefault position={[0, 0, 5]} />
       <OrbitControls />
       
-      {/* Dynamic Background determined by AI mood (fallback to black) */}
       <color attach="background" args={['#050505']} />
       
       <ambientLight intensity={0.5} />
@@ -86,7 +93,7 @@ const Scene: React.FC = () => {
         position={sceneConfig.position}
         rotation={sceneConfig.rotation}
         scale={sceneConfig.scale}
-        key={`${vertexShader}-${fragmentShader}`} // Force re-mount on shader change for fresh compilation
+        key={`${vertexShader}-${fragmentShader}`}
       >
         {geometry}
         <shaderMaterial

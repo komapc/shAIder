@@ -12,7 +12,10 @@ const App: React.FC = () => {
     logs, 
     vertexShader, 
     fragmentShader, 
+    uniforms,
+    sceneConfig,
     prompt,
+    lastError,
     setPrompt,
     setLoading,
     setShaders,
@@ -20,17 +23,23 @@ const App: React.FC = () => {
   } = useShaderStore();
 
   const handleGenerate = async (isRefining = false) => {
-    if (!prompt) return;
+    if (!prompt && !lastError) return;
     
     setLoading(true);
-    addLog(isRefining ? "Refining shader..." : "Generating new shader...");
+    addLog(isRefining ? "Refining shader..." : lastError ? `Fixing error: ${lastError.substring(0, 50)}...` : "Generating new shader...");
 
     try {
-      // Use the local API endpoint (assumed to be running or proxied)
       const response = await fetch('/api/generate-shader', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, isRefining })
+        body: JSON.stringify({ 
+          prompt, 
+          isRefining,
+          currentVertexShader: vertexShader,
+          currentFragmentShader: fragmentShader,
+          currentUniforms: uniforms,
+          lastError: lastError
+        })
       });
 
       if (!response.ok) throw new Error('API request failed');
