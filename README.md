@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# shAIder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+shAIder is a text-to-shader generator that translates your descriptions into real-time 3D shaders using AWS Bedrock.
 
-Currently, two official plugins are available:
+## Features
+- **Text-to-Shader:** Describe a visual effect and see it come to life in 3D.
+- **Real-time Editors:** Manually tweak the auto-generated Vertex and Fragment shaders.
+- **Dynamic Parameters:** Automatically inferred sliders for custom uniforms.
+- **3D Scene:** Interactive, rotatable viewport with dynamic geometry (Sphere, Box, Plane, Torus).
+- **Dark Mode UI:** A polished, developer-friendly aesthetic.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
+- **Frontend:** React 19, Three.js, @react-three/fiber, Zustand, CodeMirror, Tailwind CSS.
+- **Backend:** AWS Lambda, AWS Bedrock Runtime SDK.
+- **Testing:** Vitest, React Testing Library.
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
+- Node.js 20+
+- AWS Account with Bedrock access (for AI generation)
 
-## Expanding the ESLint configuration
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/komapc/shAIder.git
+   cd shAIder
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Local Development
+To run the development server:
+```bash
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Testing
+To run the unit tests:
+```bash
+npm run test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Roadmap
+- [x] Initial UI and 3D Scene
+- [x] Multiline Prompt & Shader Editors
+- [x] Unit Testing & Pre-commit Hooks
+- [ ] AWS Bedrock Integration (In Progress)
+- [ ] "Refine" Prompt Logic
+- [ ] Local Save/Project Export
+- [ ] Shadow Support & PBR Material Refinement

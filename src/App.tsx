@@ -13,8 +13,38 @@ const App: React.FC = () => {
     vertexShader, 
     fragmentShader, 
     prompt,
-    setPrompt 
+    setPrompt,
+    setLoading,
+    setShaders,
+    addLog
   } = useShaderStore();
+
+  const handleGenerate = async (isRefining = false) => {
+    if (!prompt) return;
+    
+    setLoading(true);
+    addLog(isRefining ? "Refining shader..." : "Generating new shader...");
+
+    try {
+      // Use the local API endpoint (assumed to be running or proxied)
+      const response = await fetch('/api/generate-shader', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, isRefining })
+      });
+
+      if (!response.ok) throw new Error('API request failed');
+
+      const data = await response.json();
+      setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneConfig);
+      addLog("Compilation successful.");
+    } catch (error: any) {
+      console.error(error);
+      addLog(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
@@ -31,14 +61,27 @@ const App: React.FC = () => {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20 w-full">
+            <button 
+              onClick={() => handleGenerate(false)}
+              disabled={isLoading}
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20 w-full"
+            >
               <Play size={16} fill="currentColor" />
               Generate
             </button>
-            <button className="flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
-               <RotateCcw size={14} />
-               Reset
-            </button>
+            <div className="flex gap-2">
+               <button 
+                 onClick={() => handleGenerate(true)}
+                 disabled={isLoading}
+                 className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-[#222] hover:bg-[#2a2a2a] disabled:opacity-50 rounded-lg text-xs font-medium text-gray-300 transition-colors"
+               >
+                  Refine
+               </button>
+               <button className="flex-1 flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+                  <RotateCcw size={14} />
+                  Reset
+               </button>
+            </div>
           </div>
         </div>
       </div>
