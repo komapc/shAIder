@@ -20,23 +20,26 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
       {/* Top Header/Prompt Area */}
       <div className="p-4 border-b border-gray-800 bg-[#111] shadow-xl z-10">
-        <div className="max-w-7xl mx-auto flex gap-4 items-center">
+        <div className="max-w-7xl mx-auto flex gap-4 items-start">
           <div className="flex-1 relative group">
-            <input 
-              type="text" 
+            <textarea 
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe your shader... (e.g., 'A metallic pulsing sphere')"
-              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-2.5 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600"
+              rows={2}
+              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-2.5 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto"
             />
           </div>
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20">
-            <Play size={16} fill="currentColor" />
-            Generate
-          </button>
-          <button className="p-2.5 text-gray-500 hover:text-white transition-colors">
-             <RotateCcw size={18} />
-          </button>
+          <div className="flex flex-col gap-2">
+            <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20 w-full">
+              <Play size={16} fill="currentColor" />
+              Generate
+            </button>
+            <button className="flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+               <RotateCcw size={14} />
+               Reset
+            </button>
+          </div>
         </div>
       </div>
 
