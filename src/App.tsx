@@ -5,7 +5,7 @@ import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson, Trash2 } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const { 
@@ -18,6 +18,7 @@ const App: React.FC = () => {
     prompt,
     sceneDescription,
     lastError,
+    errorDetails,
     isSidebarVisible,
     headerHeight,
     isCompiled,
@@ -29,6 +30,7 @@ const App: React.FC = () => {
     setLoading,
     setShaders,
     addLog,
+    setLastError,
     clearLogs,
     toggleSidebar,
     setHeaderHeight,
@@ -36,6 +38,7 @@ const App: React.FC = () => {
   } = useShaderStore();
 
   const [isResizing, setIsResizing] = useState(false);
+  const [isParamsCollapsed, setIsParamsCollapsed] = useState(false);
 
   const startResizing = useCallback((event: React.MouseEvent) => {
     setIsResizing(true);
@@ -66,7 +69,7 @@ const App: React.FC = () => {
     if (!prompt && !sceneDescription && !lastError) return;
     
     setLoading(true);
-    addLog(isRefining ? "Refining scene..." : lastError ? `Fixing error: ${lastError.substring(0, 50)}...` : "Generating new scene...");
+    addLog(isRefining ? "Refining scene..." : lastError ? `Attempting fix...` : "Generating new scene...");
 
     try {
       const response = await fetch('/api/generate-shader', {
@@ -84,14 +87,18 @@ const App: React.FC = () => {
         })
       });
 
-      if (!response.ok) throw new Error('API request failed');
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'API request failed');
+      }
+
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
       addLog("Compilation successful.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(err);
+      setLastError("AI Generation Failed", message);
       addLog(`Error: ${message}`);
     } finally {
       setLoading(false);
@@ -100,19 +107,47 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
-      {/* Error Banner */}
-      {!isCompiled && (
-        <div className="bg-red-600/20 border-b border-red-600/40 px-6 py-2 flex items-center gap-3 animate-in slide-in-from-top duration-300">
-           <AlertTriangle className="text-red-500" size={16} />
-           <span className="text-xs font-bold text-red-200 uppercase tracking-widest">
-             Shader compilation failed. See editors for details.
-           </span>
-           <button 
-             onClick={() => handleGenerate(true)}
-             className="ml-auto bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-colors"
-           >
-             FIX WITH AI (REFINE)
-           </button>
+      
+      {/* Enhanced Error Overlay */}
+      {(lastError || !isCompiled) && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-2xl px-4 animate-in fade-in zoom-in duration-300">
+            <div className="bg-[#1a0a0a]/95 backdrop-blur-xl border border-red-500/30 rounded-2xl shadow-2xl overflow-hidden shadow-red-950/20">
+                <div className="bg-red-500/10 px-6 py-4 flex items-center justify-between border-b border-red-500/20">
+                    <div className="flex items-center gap-3">
+                        <XCircle className="text-red-500" size={20} />
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-red-200">
+                            {!isCompiled ? "GLSL Compilation Error" : "LLM Request Error"}
+                        </h2>
+                    </div>
+                    <button 
+                        onClick={() => setLastError(null)}
+                        className="text-red-500/50 hover:text-red-400 transition-colors"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+                <div className="p-6">
+                    <p className="text-xs text-red-200/70 font-mono leading-relaxed bg-black/40 p-4 rounded-lg border border-red-500/10 mb-6 max-h-48 overflow-y-auto">
+                        {errorDetails || lastError || "Three.js failed to compile the shader. Check the editor for syntax errors."}
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => handleGenerate(true)}
+                            disabled={isLoading}
+                            className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-[11px] font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+                        >
+                            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+                            FIX WITH AI (REFINE)
+                        </button>
+                        <button 
+                            onClick={() => setLastError(null)}
+                            className="px-6 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold rounded-xl transition-colors border border-white/10"
+                        >
+                            DISMISS
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
 
@@ -217,8 +252,19 @@ const App: React.FC = () => {
         {/* Left Side: Editors & Params */}
         {isSidebarVisible && (
           <div className="w-1/3 flex flex-col border-r border-gray-800 bg-[#111] shadow-2xl z-20">
-            <div className="h-1/3 min-h-[150px]">
-               <ParametersPanel />
+            <div className={`transition-all duration-300 overflow-hidden border-b border-gray-800 flex flex-col ${isParamsCollapsed ? 'h-[32px]' : 'h-1/3 min-h-[150px]'}`}>
+               <div 
+                 onClick={() => setIsParamsCollapsed(!isParamsCollapsed)}
+                 className="bg-[#1a1a1a] px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-[#222] transition-colors flex-shrink-0"
+               >
+                  <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Parameters</h3>
+                  {isParamsCollapsed ? <ChevronDown size={14} className="text-gray-500" /> : <ChevronUp size={14} className="text-gray-500" />}
+               </div>
+               {!isParamsCollapsed && (
+                 <div className="flex-1 min-h-0">
+                    <ParametersPanel />
+                 </div>
+               )}
             </div>
             
             {/* Editor Tab Switcher */}

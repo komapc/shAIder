@@ -1,7 +1,7 @@
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
 
 /**
- * Fallback to OpenRouter using a FREE model if Bedrock is not configured
+ * Fallback to OpenRouter using a stable model
  */
 async function callOpenRouter(systemPrompt, userMessage) {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -9,11 +9,11 @@ async function callOpenRouter(systemPrompt, userMessage) {
     throw new Error("OpenRouter API Key is missing. Please update it in AWS Secrets Manager.");
   }
 
+  // Priority: Stable Paid (Haiku) -> Free Models
   const models = [
+    "anthropic/claude-3-haiku",      // Most stable, very cheap
     "google/gemma-2-9b-it:free",
-    "qwen/qwen-2-7b-instruct:free",
-    "meta-llama/llama-3-8b-instruct:free",
-    "anthropic/claude-3-haiku" // Final fallback: extremely cheap and stable
+    "meta-llama/llama-3-8b-instruct:free"
   ];
 
   let lastError = null;
@@ -21,6 +21,10 @@ async function callOpenRouter(systemPrompt, userMessage) {
   for (const model of models) {
     try {
       console.log(`[API] Trying OpenRouter model: ${model}...`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -35,22 +39,33 @@ async function callOpenRouter(systemPrompt, userMessage) {
             { role: "system", content: systemPrompt },
             { role: "user", content: userMessage }
           ]
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error?.message || response.statusText);
+        throw new Error(data.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      if (!data.choices || !data.choices[0]) {
+        throw new Error("OpenRouter returned an empty choices array.");
       }
 
       return data.choices[0].message.content;
     } catch (err) {
-      console.warn(`[API] Model ${model} failed:`, err.message);
+      console.warn(`[API] Model ${model} failed:`, err.name === 'AbortError' ? 'Timeout' : err.message);
       lastError = err;
+      // If it's a network/fetch error, wait a moment before trying next model
+      if (err.name !== 'AbortError') {
+          await new Promise(res => setTimeout(res, 1000));
+      }
     }
   }
 
-  throw new Error(`All OpenRouter fallback models failed. Last error: ${lastError.message}`);
+  throw new Error(`Connectivity Error: Could not reach OpenRouter. Please check your internet connection or if OpenRouter is down. (Last error: ${lastError.message})`);
 }
 
 /**
@@ -91,7 +106,7 @@ exports.handler = async (event) => {
       - 'Voronoi Cells': Shifting geometric organic patterns.
 
       AVAILABLE GEOMETRIES:
-      - Primitives: 'sphere', 'box' (or 'cube'), 'plane', 'torus', 'knot', 'cylinder', 'pyramid'.
+      - Primitives: 'sphere', 'box' (or 'cube'), 'plane', 'torus', 'knot', 'cylinder', 'pyramid', 'floor'.
       - Complex (Composite): 'table', 'chair'.
     `;
 
@@ -107,6 +122,12 @@ exports.handler = async (event) => {
       2. "fragmentShader": A GLSL fragment shader string.
       3. "uniforms": An array of objects: { name, type, value, min, max }.
       4. "sceneObjects": An array of objects: { id, objectType, position, scale, rotation, color }.
+
+      CRITICAL JSON RULES:
+      - Use standard double quotes (") for all strings.
+      - DO NOT use backticks (\`) for multi-line strings.
+      - Escape newlines as \\n.
+      - The response must be a SINGLE valid JSON object.
 
       TEXTURE SUPPORT:
       - If user provides a URL for a texture, create a uniform with type: 'texture' and value: 'the_url'.
@@ -175,15 +196,38 @@ exports.handler = async (event) => {
         throw new Error("No response from any AI provider.");
     }
 
+    // Aggressive JSON extraction and fixing
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
         throw new Error("AI did not return a valid JSON object.");
     }
 
     let jsonString = jsonMatch[0].trim();
-    jsonString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
     
-    const shaderData = JSON.parse(jsonString);
+    // Fix common AI formatting errors like "key": `value`
+    jsonString = jsonString.replace(/:\s*`([\s\S]*?)`/g, (match, content) => {
+        const escaped = content
+            .replace(/\\/g, '\\\\')
+            .replace(/\n/g, '\\n')
+            .replace(/"/g, '\\"');
+        return `: "${escaped}"`;
+    });
+
+    jsonString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, (c) => {
+        return c === '\n' || c === '\r' || c === '\t' ? c : '';
+    });
+    
+    let shaderData;
+    try {
+        shaderData = JSON.parse(jsonString);
+    } catch (parseError) {
+        console.error("[API] JSON Parse Error. String attempted:", jsonString);
+        try {
+            shaderData = JSON.parse(jsonString.replace(/`/g, '"'));
+        } catch (secondError) {
+            throw new Error(`Failed to parse generated JSON: ${parseError.message}`);
+        }
+    }
 
     return {
       statusCode: 200,

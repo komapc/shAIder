@@ -13,7 +13,7 @@ interface ShaderEditorProps {
 
 const ShaderEditor: React.FC<ShaderEditorProps> = ({ label, value, onChange, isError }) => {
   return (
-    <div className={`flex flex-col h-1/2 border-b border-gray-800 last:border-b-0 overflow-hidden transition-colors ${isError ? 'border-red-900/50' : ''}`}>
+    <div className={`flex flex-col h-full border-b border-gray-800 last:border-b-0 overflow-hidden transition-colors ${isError ? 'border-red-900/50' : ''}`}>
       <div 
         className={`flex items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-widest border-b transition-colors ${isError ? 'bg-red-950/30 text-red-400 border-red-900/50' : 'bg-[#1a1a1a] text-gray-500 border-gray-800'}`}
         role="heading"

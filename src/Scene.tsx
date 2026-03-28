@@ -89,11 +89,22 @@ const SingleObject: React.FC<{
   if (type === 'table') {
     return (
       <group position={obj.position} rotation={obj.rotation} scale={obj.scale}>
+        {/* Table top: centered at y=0.5, height 0.1 -> top surface at 0.55 */}
         <mesh position={[0, 0.5, 0]}><boxGeometry args={[2, 0.1, 1.2]} />{material}</mesh>
-        {[[-0.9, 0, -0.5], [0.9, 0, -0.5], [-0.9, 0, 0.5], [0.9, 0, 0.5]].map((pos, i) => (
-          <mesh key={i} position={pos as [number, number, number]}><boxGeometry args={[0.1, 1, 0.1]} />{material}</mesh>
+        {/* Legs: length 0.5, centered at 0.25 -> reaching from 0 to 0.5 */}
+        {[[-0.9, 0.25, -0.5], [0.9, 0.25, -0.5], [-0.9, 0.25, 0.5], [0.9, 0.25, 0.5]].map((pos, i) => (
+          <mesh key={i} position={pos as [number, number, number]}><boxGeometry args={[0.1, 0.5, 0.1]} />{material}</mesh>
         ))}
       </group>
+    );
+  }
+
+  if (type === 'floor' || type === 'ground') {
+    return (
+      <mesh position={[obj.position[0], obj.position[1], obj.position[2]]} rotation={[-Math.PI / 2, 0, 0]} key={obj.id}>
+        <planeGeometry args={[20, 20]} />
+        {material}
+      </mesh>
     );
   }
 

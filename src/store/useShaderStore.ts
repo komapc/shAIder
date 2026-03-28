@@ -27,6 +27,7 @@ interface ShaderState {
   isLoading: boolean;
   logs: string[];
   lastError: string | null;
+  errorDetails: string | null;
   isSidebarVisible: boolean;
   headerHeight: number;
   isCompiled: boolean;
@@ -40,7 +41,7 @@ interface ShaderState {
   updateUniform: (name: string, value: unknown) => void;
   setLoading: (loading: boolean) => void;
   addLog: (log: string) => void;
-  setLastError: (error: string | null) => void;
+  setLastError: (error: string | null, details?: string | null) => void;
   setIsCompiled: (isCompiled: boolean) => void;
   clearLogs: () => void;
   toggleSidebar: () => void;
@@ -89,6 +90,7 @@ export const useShaderStore = create<ShaderState>((set) => ({
   isLoading: false,
   logs: [],
   lastError: null,
+  errorDetails: null,
   isSidebarVisible: true,
   headerHeight: 220,
   isCompiled: true,
@@ -96,16 +98,16 @@ export const useShaderStore = create<ShaderState>((set) => ({
 
   setPrompt: (prompt) => set({ prompt }),
   setSceneDescription: (sceneDescription) => set({ sceneDescription }),
-  setVertexShader: (vertexShader) => set({ vertexShader, lastError: null, isCompiled: true }),
-  setFragmentShader: (fragmentShader) => set({ fragmentShader, lastError: null, isCompiled: true }),
+  setVertexShader: (vertexShader) => set({ vertexShader, lastError: null, errorDetails: null, isCompiled: true }),
+  setFragmentShader: (fragmentShader) => set({ fragmentShader, lastError: null, errorDetails: null, isCompiled: true }),
   setShaders: (vertex, fragment, uniforms, sceneObjects) => 
-    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneObjects, lastError: null, isCompiled: true }),
+    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneObjects, lastError: null, errorDetails: null, isCompiled: true }),
   updateUniform: (name, value) => set((state) => ({
     uniforms: state.uniforms.map(u => u.name === name ? { ...u, value } : u)
   })),
-  setLoading: (isLoading) => set({ isLoading }),
+  setLoading: (isLoading) => set({ isLoading, lastError: null, errorDetails: null }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
-  setLastError: (lastError) => set({ lastError }),
+  setLastError: (lastError, errorDetails = null) => set({ lastError, errorDetails }),
   setIsCompiled: (isCompiled) => set({ isCompiled }),
   clearLogs: () => set({ logs: [] }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),

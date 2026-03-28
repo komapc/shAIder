@@ -25,6 +25,7 @@ export const OBJECT_LIBRARY: LibraryObject[] = [
   { id: 'plane', name: 'Plane', type: 'plane', description: 'Flat 2D surface in 3D space' },
   { id: 'torus', name: 'Torus', type: 'torus', description: 'Donut-shaped ring' },
   { id: 'knot', name: 'Torus Knot', type: 'knot', description: 'Complex intertwined knot' },
+  { id: 'floor', name: 'Floor', type: 'floor', description: 'Large ground plane' },
   { id: 'table', name: 'Table', type: 'table', description: 'A basic 4-legged table' },
   { id: 'chair', name: 'Chair', type: 'chair', description: 'A basic chair with a backrest' },
   { id: 'cylinder', name: 'Cylinder', type: 'cylinder', description: 'A classic tube or pillar' },
