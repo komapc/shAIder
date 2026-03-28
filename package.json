@@ -41,6 +41,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/ui": "^4.1.2",
+    "@aws-amplify/backend": "^1.14.0",
+    "@aws-amplify/backend-cli": "^1.4.10",
     "autoprefixer": "^10.4.27",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.4",
