@@ -20,7 +20,7 @@ async function callOpenRouter(systemPrompt, userMessage) {
       "X-Title": "shAIder local"
     },
     body: JSON.stringify({
-      model: "mistralai/mistral-7b-instruct:free", // Reliable free model
+      model: "meta-llama/llama-3.1-8b-instruct:free", // More reliable free model
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage }
