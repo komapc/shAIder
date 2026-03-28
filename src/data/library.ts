@@ -1,7 +1,7 @@
 export interface LibraryObject {
   id: string;
   name: string;
-  type: 'sphere' | 'box' | 'plane' | 'torus' | 'knot' | 'table' | 'chair' | 'cylinder' | 'pyramid';
+  type: 'sphere' | 'box' | 'plane' | 'torus' | 'knot' | 'table' | 'chair' | 'cylinder' | 'pyramid' | 'floor';
   description: string;
 }
 
@@ -55,7 +55,7 @@ export const MATERIAL_LIBRARY: LibraryMaterial[] = [
     id: 'hologram', 
     name: 'Digital Hologram', 
     prompt: 'Blue glowing hologram with scanning lines, digital noise, and flickering transparency.',
-    description: 'Sci-fi holographic projection'
+    description: 'Sci-fi blue glowing flickers'
   },
   { 
     id: 'voronoi', 

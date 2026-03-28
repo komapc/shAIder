@@ -5,27 +5,17 @@ import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
 
 // Amplify Integration
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../amplify/data/resource';
+import { configureAmplify } from './amplify-config';
 
-// Only attempt to configure if we are not in a test environment
-// In a real Amplify deploy, this file is generated at build time
-try {
-    // @ts-ignore
-    import('../amplify_outputs.json').then((outputs) => {
-        Amplify.configure(outputs.default);
-    }).catch(() => {
-        console.warn("Amplify outputs not found. Local API will be used as fallback.");
-    });
-} catch (e) {
-    console.warn("Amplify configuration failed. Falling back to local.");
-}
+const client = generateClient<any>();
 
-const client = generateClient<Schema>();
+// Initialize Amplify
+configureAmplify();
 
 const App: React.FC = () => {
   const { 
@@ -105,7 +95,7 @@ const App: React.FC = () => {
             currentUniforms: JSON.stringify(uniforms),
             currentSceneObjects: JSON.stringify(sceneObjects),
             lastError: lastError || ""
-          });
+          }) as any;
 
           if (response.errors) throw new Error(response.errors[0].message);
           data = JSON.parse(response.data?.generateShader || "{}");
