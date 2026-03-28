@@ -38,7 +38,7 @@ interface ShaderState {
 }
 
 export const useShaderStore = create<ShaderState>((set) => ({
-  prompt: '',
+  prompt: 'A pulsing, iridescent metallic material with organic, flowing wave patterns that react to time.',
   sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. A bright point light source (sun) positioned high above and slightly to the right.',
   vertexShader: `
     varying vec2 vUv;
