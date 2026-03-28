@@ -1,4 +1,3 @@
-import { Schema } from '../../data/resource';
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
 /**
@@ -45,7 +44,7 @@ async function callOpenRouter(systemPrompt: string, userMessage: string) {
   throw lastError;
 }
 
-export const handler: any = async (event: any) => {
+export const handler = async (event: any) => {
   const region = process.env.AWS_REGION || "eu-central-1";
   const client = new BedrockRuntimeClient({ region });
   
@@ -111,16 +110,8 @@ export const handler: any = async (event: any) => {
     jsonString = jsonString.replace(/:\s*`([\s\S]*?)`/g, (m, c) => `": "${c.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
     const shaderData = JSON.parse(jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify(shaderData),
-    };
+    return JSON.stringify(shaderData); // Returns raw string for the mutation
   } catch (error: any) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Internal Server Error", message: error.message }),
-    };
+    throw new Error(error.message);
   }
 };

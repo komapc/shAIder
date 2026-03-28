@@ -6,5 +6,5 @@ export const generateShader = defineFunction({
   environment: {
     OPENROUTER_API_KEY: secret('OPENROUTER_API_KEY')
   },
-  timeoutSeconds: 60 // Allow time for LLM response
+  timeoutSeconds: 60
 });
