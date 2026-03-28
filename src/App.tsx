@@ -7,6 +7,26 @@ import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
 import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
 
+// Amplify Integration
+import { Amplify } from 'aws-amplify';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../amplify/data/resource';
+
+// Only attempt to configure if we are not in a test environment
+// In a real Amplify deploy, this file is generated at build time
+try {
+    // @ts-ignore
+    import('../amplify_outputs.json').then((outputs) => {
+        Amplify.configure(outputs.default);
+    }).catch(() => {
+        console.warn("Amplify outputs not found. Local API will be used as fallback.");
+    });
+} catch (e) {
+    console.warn("Amplify configuration failed. Falling back to local.");
+}
+
+const client = generateClient<Schema>();
+
 const App: React.FC = () => {
   const { 
     isLoading, 
@@ -72,25 +92,41 @@ const App: React.FC = () => {
     addLog(isRefining ? "Refining scene..." : lastError ? `Attempting fix...` : "Generating new scene...");
 
     try {
-      const response = await fetch('/api/generate-shader', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt, 
-          sceneDescription,
-          isRefining,
-          currentVertexShader: vertexShader,
-          currentFragmentShader: fragmentShader,
-          currentUniforms: uniforms,
-          currentSceneObjects: sceneObjects,
-          lastError: lastError
-        })
-      });
+      let data;
+      
+      // Use Amplify Backend if configured, otherwise fallback to local server
+      if (Amplify.getConfig().API) {
+          const response = await client.mutations.generateShader({
+            prompt,
+            sceneDescription,
+            isRefining,
+            currentVertexShader: vertexShader,
+            currentFragmentShader: fragmentShader,
+            currentUniforms: JSON.stringify(uniforms),
+            currentSceneObjects: JSON.stringify(sceneObjects),
+            lastError: lastError || ""
+          });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'API request failed');
+          if (response.errors) throw new Error(response.errors[0].message);
+          data = JSON.parse(response.data?.generateShader || "{}");
+      } else {
+          // Fallback to local node server
+          const response = await fetch('/api/generate-shader', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              prompt, 
+              sceneDescription,
+              isRefining,
+              currentVertexShader: vertexShader,
+              currentFragmentShader: fragmentShader,
+              currentUniforms: uniforms,
+              currentSceneObjects: sceneObjects,
+              lastError: lastError
+            })
+          });
+          data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'API request failed');
       }
 
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
