@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useShaderStore } from './useShaderStore';
-import type { SceneObject } from './useShaderStore';
+import type { SceneObject, Uniform } from './useShaderStore';
 
 describe('useShaderStore', () => {
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('useShaderStore', () => {
     
     const newVertex = 'void main() {}';
     const newFragment = 'void main() { gl_FragColor = vec4(1.0); }';
-    const newUniforms: any[] = [{ name: 'test', type: 'float' as const, value: 1.0 }];
+    const newUniforms: Uniform[] = [{ name: 'test', type: 'float' as const, value: 1.0 }];
     const newSceneObjects: SceneObject[] = [
       { id: '1', objectType: 'box', position: [1, 1, 1], scale: [1, 1, 1], rotation: [0, 0, 0] }
     ];

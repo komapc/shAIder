@@ -1,29 +1,31 @@
 import React, { useRef, useMemo, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useShaderStore } from './store/useShaderStore';
-import type { SceneObject } from './store/useShaderStore';
+import type { SceneObject, Uniform } from './store/useShaderStore';
 
 // Global hooks for the console.error interceptor
 const originalError = console.error;
-let globalAddLog: ((m: string) => void) | null = null;
-let globalSetLastError: ((m: string) => void) | null = null;
-let globalSetIsCompiled: ((b: boolean) => void) | null = null;
+const globalState = {
+  addLog: null as ((m: string) => void) | null,
+  setLastError: null as ((m: string) => void) | null,
+  setIsCompiled: null as ((b: boolean) => void) | null
+};
 
 // Intercept shader compilation errors globally and immediately
-console.error = (...args) => {
+console.error = (...args: unknown[]) => {
   const message = args.join(' ');
   if (message.includes('THREE.WebGLProgram: shader error:')) {
-    if (globalSetIsCompiled) {
-        setTimeout(() => globalSetIsCompiled!(false), 0);
+    if (globalState.setIsCompiled) {
+        setTimeout(() => globalState.setIsCompiled?.(false), 0);
     }
-    if (globalAddLog) {
-        setTimeout(() => globalAddLog!("GLSL Error detected!"), 0);
+    if (globalState.addLog) {
+        setTimeout(() => globalState.addLog?.("GLSL Error detected!"), 0);
     }
     const errorLines = message.split('\n').filter(l => l.includes('ERROR:'));
-    if (globalSetLastError) {
-        setTimeout(() => globalSetLastError!(errorLines.length > 0 ? errorLines.join('\n') : message), 0);
+    if (globalState.setLastError) {
+        setTimeout(() => globalState.setLastError?.(errorLines.length > 0 ? errorLines.join('\n') : message), 0);
     }
   }
   originalError.apply(console, args);
@@ -33,13 +35,12 @@ const SingleObject: React.FC<{
   obj: SceneObject; 
   vertexShader: string; 
   fragmentShader: string; 
-  uniforms: any;
+  uniforms: Record<string, { value: unknown }>;
   isCompiled: boolean;
 }> = ({ obj, vertexShader, fragmentShader, uniforms, isCompiled }) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const { gl } = useThree();
 
-  // VALIDATION STEP: Try to compile the shader manually to catch errors even if rendering doesn't trigger it
   useEffect(() => {
     try {
         const testMaterial = new THREE.ShaderMaterial({
@@ -47,23 +48,18 @@ const SingleObject: React.FC<{
             fragmentShader,
             uniforms: uniforms
         });
-        
-        // This forces Three.js to try and compile the program immediately
-        const program = gl.getContext().createProgram(); 
-        // We don't actually need to link it, Three.js internal compilation is triggered by usage
-        // But simply setting needsUpdate and rendering a frame usually works.
-        // For a more robust "manual" check:
+        const dummyMesh = new THREE.Mesh(new THREE.BoxGeometry(), testMaterial);
+        gl.compile(dummyMesh, new THREE.Scene(), new THREE.Camera());
         if (materialRef.current) {
             materialRef.current.needsUpdate = true;
         }
     } catch (e) {
-        // Fallback for non-WebGL errors
         console.error("Manual compilation check failed", e);
     }
   }, [vertexShader, fragmentShader, gl, uniforms]);
 
   useFrame((state) => {
-    if (materialRef.current && isCompiled) {
+    if (materialRef.current && isCompiled && materialRef.current.uniforms.time) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
     }
   });
@@ -106,25 +102,66 @@ const SingleObject: React.FC<{
     );
   }
 
-  const geometry = useMemo(() => {
-    switch (type) {
-      case 'box':
-      case 'cube': return <boxGeometry args={[1, 1, 1]} />;
-      case 'plane': return <planeGeometry args={[2, 2, 32, 32]} />;
-      case 'torus': return <torusGeometry args={[0.7, 0.3, 16, 100]} />;
-      case 'knot': return <torusKnotGeometry args={[0.6, 0.2, 128, 16]} />;
-      case 'cylinder': return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
-      case 'pyramid': return <coneGeometry args={[0.7, 1, 4]} />;
-      default: return <sphereGeometry args={[1, 64, 64]} />;
-    }
-  }, [type]);
-
   return (
     <mesh position={obj.position} rotation={obj.rotation} scale={obj.scale} key={obj.id}>
-      {geometry}
+      {type === 'box' || type === 'cube' ? <boxGeometry args={[1, 1, 1]} /> :
+       type === 'plane' ? <planeGeometry args={[2, 2, 32, 32]} /> :
+       type === 'torus' ? <torusGeometry args={[0.7, 0.3, 16, 100]} /> :
+       type === 'knot' ? <torusKnotGeometry args={[0.6, 0.2, 128, 16]} /> :
+       type === 'cylinder' ? <cylinderGeometry args={[0.5, 0.5, 1, 32]} /> :
+       type === 'pyramid' ? <coneGeometry args={[0.7, 1, 4]} /> :
+       <sphereGeometry args={[1, 64, 64]} />}
       {material}
     </mesh>
   );
+};
+
+// Helper component to load textures and pass them to Scene
+const UniformsManager: React.FC<{ 
+  uniforms: Uniform[]; 
+  children: (formattedUniforms: Record<string, { value: unknown }>) => React.ReactNode 
+}> = ({ uniforms, children }) => {
+  const { size } = useThree();
+  
+  // Identify all texture URLs
+  const textureUrls = useMemo(() => 
+    uniforms.filter(u => u.type === 'texture' && typeof u.value === 'string').map(u => u.value as string),
+    [uniforms]
+  );
+
+  // Pre-load all textures
+  // useLoader can take an array of URLs
+  const loadedTextures = useLoader(THREE.TextureLoader, textureUrls.length > 0 ? textureUrls : []);
+  
+  // Create a mapping of URL -> Texture
+  const textureMap = useMemo(() => {
+    const map: Record<string, THREE.Texture> = {};
+    textureUrls.forEach((url, i) => {
+      map[url] = Array.isArray(loadedTextures) ? loadedTextures[i] : loadedTextures;
+    });
+    return map;
+  }, [textureUrls, loadedTextures]);
+
+  const formattedUniforms = useMemo(() => {
+    const formatted: Record<string, { value: unknown }> = {
+      time: { value: 0 },
+      resolution: { value: new THREE.Vector2(size.width, size.height) }
+    };
+    
+    uniforms.forEach(u => {
+      if (u.type === 'color') {
+        formatted[u.name] = { value: new THREE.Color(u.value as string) };
+      } else if (u.type === 'texture') {
+        formatted[u.name] = { value: textureMap[u.value as string] || null };
+      } else {
+        formatted[u.name] = { value: u.value };
+      }
+    });
+    
+    return formatted;
+  }, [uniforms, textureMap, size]);
+
+  return <>{children(formattedUniforms)}</>;
 };
 
 const Scene: React.FC = () => {
@@ -142,23 +179,21 @@ const Scene: React.FC = () => {
         setLastError(errorLines.length > 0 ? errorLines.join('\n') : message);
       }, 0);
     };
-    return () => { window.__GLSL_ERROR_CALLBACK__ = null; };
+    globalState.addLog = addLog;
+    globalState.setLastError = setLastError;
+    globalState.setIsCompiled = setIsCompiled;
+
+    return () => { 
+      window.__GLSL_ERROR_CALLBACK__ = null;
+      globalState.addLog = null;
+      globalState.setLastError = null;
+      globalState.setIsCompiled = null;
+    };
   }, [addLog, setLastError, setIsCompiled]);
 
   useEffect(() => {
     if (!isCompiled) setIsCompiled(true);
-  }, [vertexShader, fragmentShader, setIsCompiled]);
-
-  const memoizedUniforms = useMemo(() => {
-    const formatted: { [key: string]: { value: any } } = {
-      time: { value: 0 },
-      resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-    };
-    uniforms.forEach(u => {
-      formatted[u.name] = { value: u.type === 'color' ? new THREE.Color(u.value) : u.value };
-    });
-    return formatted;
-  }, [uniforms]);
+  }, [vertexShader, fragmentShader, setIsCompiled, isCompiled]);
 
   return (
     <>
@@ -168,9 +203,24 @@ const Scene: React.FC = () => {
       <ambientLight intensity={1.5} />
       <pointLight position={[10, 10, 10]} intensity={2.0} />
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4444ff" />
-      {sceneObjects.map((obj) => (
-        <SingleObject key={obj.id} obj={obj} vertexShader={vertexShader} fragmentShader={fragmentShader} uniforms={memoizedUniforms} isCompiled={isCompiled} />
-      ))}
+      
+      <UniformsManager uniforms={uniforms}>
+        {(formattedUniforms) => (
+          <>
+            {sceneObjects.map((obj) => (
+              <SingleObject 
+                key={obj.id} 
+                obj={obj} 
+                vertexShader={vertexShader} 
+                fragmentShader={fragmentShader} 
+                uniforms={formattedUniforms} 
+                isCompiled={isCompiled} 
+              />
+            ))}
+          </>
+        )}
+      </UniformsManager>
+      
       <gridHelper args={[20, 20, 0x222222, 0x111111]} position={[0, -1.5, 0]} />
     </>
   );

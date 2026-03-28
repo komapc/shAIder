@@ -55,6 +55,11 @@ exports.handler = async (event) => {
       3. "uniforms": An array of objects: { name, type, value, min, max }.
       4. "sceneObjects": An array of objects: { id, objectType, position, scale, rotation, color }.
 
+      TEXTURE SUPPORT:
+      - If user provides a URL for a texture, create a uniform with type: 'texture' and value: 'the_url'.
+      - In the GLSL code, declare it as 'uniform sampler2D name;'.
+      - Use texture2D(name, vUv) to sample it.
+
       SCENE CONFIGURATION:
       - id: unique string.
       - position: [x, y, z] (array of 3 numbers)
@@ -69,7 +74,7 @@ exports.handler = async (event) => {
       - Ensure "time" (float) and "resolution" (vec2) uniforms are declared if used.
 
       UNIFORM TYPES:
-      - 'float', 'vec3', 'color' (hex string).
+      - 'float', 'vec3', 'color' (hex string), 'texture' (URL string).
     `;
 
     if (isRefining || lastError) {
@@ -126,7 +131,6 @@ exports.handler = async (event) => {
         throw new Error("AI did not return a valid JSON object. Check logs for raw output.");
     }
 
-    // Aggressively clean the string: remove non-printable chars and ensure it ends at the last closing brace
     let jsonString = jsonMatch[0].trim();
     jsonString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
     

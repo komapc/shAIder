@@ -37,18 +37,18 @@ const App: React.FC = () => {
 
   const [isResizing, setIsResizing] = useState(false);
 
-  const startResizing = useCallback((e: React.MouseEvent) => {
+  const startResizing = useCallback((event: React.MouseEvent) => {
     setIsResizing(true);
-    e.preventDefault();
+    event.preventDefault();
   }, []);
 
   const stopResizing = useCallback(() => {
     setIsResizing(false);
   }, []);
 
-  const resize = useCallback((e: MouseEvent) => {
+  const resize = useCallback((event: MouseEvent) => {
     if (isResizing) {
-      const newHeight = Math.max(100, Math.min(e.clientY, window.innerHeight * 0.7));
+      const newHeight = Math.max(100, Math.min(event.clientY, window.innerHeight * 0.7));
       setHeaderHeight(newHeight);
     }
   }, [isResizing, setHeaderHeight]);
@@ -89,9 +89,10 @@ const App: React.FC = () => {
       const data = await response.json();
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
       addLog("Compilation successful.");
-    } catch (error: any) {
-      console.error(error);
-      addLog(`Error: ${error.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(err);
+      addLog(`Error: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -269,7 +270,7 @@ const App: React.FC = () => {
                             if (Array.isArray(parsed)) {
                                 useShaderStore.setState({ sceneObjects: parsed });
                             }
-                        } catch (e) { /* silent fail while typing */ }
+                        } catch { /* silent fail while typing */ }
                     }} 
                 />
               )}

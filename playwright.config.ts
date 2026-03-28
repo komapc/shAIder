@@ -18,8 +18,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: process.env.CI ? 'npm run preview' : 'npm run dev',
+    port: process.env.CI ? 4173 : 5173,
     reuseExistingServer: !process.env.CI,
   },
 });

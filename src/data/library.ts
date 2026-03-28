@@ -35,7 +35,7 @@ export const MATERIAL_LIBRARY: LibraryMaterial[] = [
   { 
     id: 'iridescent', 
     name: 'Iridescent Metal', 
-    prompt: 'A pulsing, iridescent metallic material with organic, flowing wave patterns that react to time.',
+    prompt: 'Apply a pulsing, iridescent metallic material with organic, flowing wave patterns that react to time specifically to the cube object.',
     description: 'Shiny, color-shifting metal'
   },
   { 
@@ -65,6 +65,8 @@ export const MATERIAL_LIBRARY: LibraryMaterial[] = [
 ];
 
 export const TEXTURE_LIBRARY: LibraryTexture[] = [
-  { id: 'noise', name: 'Perlin Noise', url: 'https://threejs.org/examples/textures/disturb.jpg', description: 'Standard noise for displacement' },
-  { id: 'metal', name: 'Brushed Metal', url: 'https://threejs.org/examples/textures/uv_grid_opengl.jpg', description: 'UV Test Grid (Placeholder)' },
+  { id: 'noise', name: 'Disturb Noise', url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/disturb.jpg', description: 'Standard noise for displacement' },
+  { id: 'lavatile', name: 'Lava Rock', url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lava/lavatile.jpg', description: 'Hot lava texture' },
+  { id: 'brick', name: 'Brick Wall', url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/brick_diffuse.jpg', description: 'Classic red brick' },
+  { id: 'carbon', name: 'Carbon Fiber', url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/carbon/Carbon.png', description: 'High-tech weave' },
 ];

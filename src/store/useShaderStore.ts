@@ -9,10 +9,10 @@ export interface SceneObject {
   color?: string;
 }
 
-interface Uniform {
+export interface Uniform {
   name: string;
-  type: 'float' | 'vec3' | 'color';
-  value: any;
+  type: 'float' | 'vec3' | 'color' | 'texture';
+  value: unknown;
   min?: number;
   max?: number;
 }
@@ -37,7 +37,7 @@ interface ShaderState {
   setVertexShader: (code: string) => void;
   setFragmentShader: (code: string) => void;
   setShaders: (vertex: string, fragment: string, uniforms: Uniform[], sceneObjects: SceneObject[]) => void;
-  updateUniform: (name: string, value: any) => void;
+  updateUniform: (name: string, value: unknown) => void;
   setLoading: (loading: boolean) => void;
   addLog: (log: string) => void;
   setLastError: (error: string | null) => void;

@@ -19,6 +19,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Lint
+        run: npm run lint
+
       - name: Run Unit Tests
         run: npm run test:unit
         
@@ -29,7 +32,7 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run E2E Tests
-        run: npm run test:e2e
+        run: npx xvfb-run npm run test:e2e
         
       # Placeholder for frontend deployment
       - name: Deploy Frontend

@@ -17,6 +17,11 @@ const LibraryPanel: React.FC = () => {
     addLog(`Library: Changed object to ${name}.`);
   };
 
+  const handleApplyTexture = (name: string, url: string) => {
+    setPrompt((prev) => `${prev}\n\nUse this texture for mapping: ${url} (name it 'tDiffuse' in uniforms)`);
+    addLog(`Library: Added texture info for "${name}". Hit Generate to let AI implement it.`);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#111] border-l border-gray-800 w-64 flex-shrink-0">
       <div className="flex border-b border-gray-800">
@@ -89,20 +94,22 @@ const LibraryPanel: React.FC = () => {
           <div className="space-y-2">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Textures</h3>
             {TEXTURE_LIBRARY.map((tex) => (
-              <div
+              <button
                 key={tex.id}
-                className="w-full p-3 rounded-lg bg-[#1a1a1a] border border-gray-800 opacity-60 cursor-not-allowed"
+                onClick={() => handleApplyTexture(tex.name, tex.url)}
+                className="w-full p-3 rounded-lg bg-[#1a1a1a] border border-gray-800 hover:border-blue-500/50 hover:bg-[#222] transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#222] rounded overflow-hidden">
-                    <img src={tex.url} alt={tex.name} className="w-full h-full object-cover grayscale" />
+                  <div className="w-10 h-10 bg-[#222] rounded overflow-hidden border border-gray-800 group-hover:border-blue-500/30 transition-colors">
+                    <img src={tex.url} alt={tex.name} className="w-full h-full object-cover" />
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-gray-400">{tex.name}</div>
-                    <div className="text-[9px] text-gray-600">Coming Soon</div>
+                  <div className="flex-1">
+                    <div className="text-xs font-bold text-gray-200">{tex.name}</div>
+                    <div className="text-[10px] text-gray-500">{tex.description}</div>
                   </div>
+                  <Sparkles size={12} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
