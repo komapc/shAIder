@@ -14,49 +14,88 @@ const SingleObject: React.FC<{
 }> = ({ obj, vertexShader, fragmentShader, uniforms, isCompiled }) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.needsUpdate = true;
+    }
+  }, [vertexShader, fragmentShader]);
+
   useFrame((state) => {
     if (materialRef.current && isCompiled) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
     }
   });
 
+  const material = isCompiled ? (
+    <shaderMaterial
+      ref={materialRef}
+      vertexShader={vertexShader}
+      fragmentShader={fragmentShader}
+      uniforms={uniforms}
+      transparent={true}
+      side={THREE.DoubleSide}
+    />
+  ) : (
+    <meshBasicMaterial color="red" wireframe={true} />
+  );
+
+  const type = (obj.objectType || 'sphere').toLowerCase();
+
+  if (type === 'table') {
+    return (
+      <group position={obj.position} rotation={obj.rotation} scale={obj.scale}>
+        <mesh position={[0, 0.5, 0]}>
+          <boxGeometry args={[2, 0.1, 1.2]} />
+          {material}
+        </mesh>
+        {[[-0.9, 0, -0.5], [0.9, 0, -0.5], [-0.9, 0, 0.5], [0.9, 0, 0.5]].map((pos, i) => (
+          <mesh key={i} position={pos as [number, number, number]}>
+            <boxGeometry args={[0.1, 1, 0.1]} />
+            {material}
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (type === 'chair') {
+    return (
+      <group position={obj.position} rotation={obj.rotation} scale={obj.scale}>
+        <mesh position={[0, 0.45, 0]}>
+          <boxGeometry args={[0.5, 0.05, 0.5]} />
+          {material}
+        </mesh>
+        <mesh position={[0, 0.7, -0.225]}>
+          <boxGeometry args={[0.5, 0.5, 0.05]} />
+          {material}
+        </mesh>
+        {[[-0.2, 0.2, -0.2], [0.2, 0.2, -0.2], [-0.2, 0.2, 0.2], [0.2, 0.2, 0.2]].map((pos, i) => (
+          <mesh key={i} position={pos as [number, number, number]}>
+            <boxGeometry args={[0.05, 0.4, 0.05]} />
+            {material}
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
   const geometry = useMemo(() => {
-    const type = (obj.objectType || 'sphere').toLowerCase();
     switch (type) {
       case 'box':
-      case 'cube':
-        return <boxGeometry args={[1, 1, 1]} />;
-      case 'plane':
-        return <planeGeometry args={[2, 2, 32, 32]} />;
-      case 'torus':
-        return <torusGeometry args={[0.7, 0.3, 16, 100]} />;
-      case 'sphere':
-      case 'ball':
-      default:
-        return <sphereGeometry args={[1, 64, 64]} />;
+      case 'cube': return <boxGeometry args={[1, 1, 1]} />;
+      case 'plane': return <planeGeometry args={[2, 2, 32, 32]} />;
+      case 'torus': return <torusGeometry args={[0.7, 0.3, 16, 100]} />;
+      case 'knot': return <torusKnotGeometry args={[0.6, 0.2, 128, 16]} />;
+      case 'cylinder': return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
+      case 'pyramid': return <coneGeometry args={[0.7, 1, 4]} />;
+      default: return <sphereGeometry args={[1, 64, 64]} />;
     }
-  }, [obj.objectType]);
+  }, [type]);
 
   return (
-    <mesh 
-      position={obj.position}
-      rotation={obj.rotation}
-      scale={obj.scale}
-      key={obj.id}
-    >
+    <mesh position={obj.position} rotation={obj.rotation} scale={obj.scale} key={obj.id}>
       {geometry}
-      {isCompiled ? (
-        <shaderMaterial
-          ref={materialRef}
-          vertexShader={vertexShader}
-          fragmentShader={fragmentShader}
-          uniforms={uniforms}
-          transparent={true}
-          side={THREE.DoubleSide}
-        />
-      ) : (
-        <meshBasicMaterial color="red" wireframe={true} />
-      )}
+      {material}
     </mesh>
   );
 };
@@ -78,10 +117,13 @@ const Scene: React.FC = () => {
     console.error = (...args) => {
       const message = args.join(' ');
       if (message.includes('THREE.WebGLProgram: shader error:')) {
-        setIsCompiled(false);
-        addLog("GLSL Error detected!");
-        const errorLines = message.split('\n').filter(l => l.includes('ERROR:'));
-        setLastError(errorLines.length > 0 ? errorLines.join('\n') : message);
+        // Use timeout to ensure state update doesn't happen during render
+        setTimeout(() => {
+          setIsCompiled(false);
+          addLog("GLSL Error detected!");
+          const errorLines = message.split('\n').filter(l => l.includes('ERROR:'));
+          setLastError(errorLines.length > 0 ? errorLines.join('\n') : message);
+        }, 0);
       }
       originalError.apply(console, args);
     };

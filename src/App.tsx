@@ -5,7 +5,7 @@ import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson, Trash2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const { 
@@ -29,6 +29,7 @@ const App: React.FC = () => {
     setLoading,
     setShaders,
     addLog,
+    clearLogs,
     toggleSidebar,
     setHeaderHeight,
     setActiveEditorTab
@@ -298,8 +299,17 @@ const App: React.FC = () => {
           {/* Compilation Logs Overlay */}
           {logs.length > 0 && (
             <div className="absolute bottom-4 left-4 right-4 max-h-48 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl p-4 overflow-y-auto shadow-2xl">
-              <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 pb-2">
-                 <span>Output Console</span>
+              <div className="flex items-center justify-between mb-2 border-b border-white/5 pb-2">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                    <span>Output Console</span>
+                </div>
+                <button 
+                    onClick={clearLogs}
+                    className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                    title="Clear Logs"
+                >
+                    <Trash2 size={12} />
+                </button>
               </div>
               <div className="space-y-1 font-mono text-xs text-green-400/80">
                 {logs.map((log, i) => (

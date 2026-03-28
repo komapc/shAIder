@@ -42,6 +42,7 @@ interface ShaderState {
   addLog: (log: string) => void;
   setLastError: (error: string | null) => void;
   setIsCompiled: (isCompiled: boolean) => void;
+  clearLogs: () => void;
   toggleSidebar: () => void;
   setHeaderHeight: (height: number) => void;
   setActiveEditorTab: (tab: 'vertex' | 'fragment' | 'scene') => void;
@@ -49,7 +50,7 @@ interface ShaderState {
 }
 
 export const useShaderStore = create<ShaderState>((set) => ({
-  prompt: 'A pulsing, iridescent metallic material with organic, flowing wave patterns that react to time.',
+  prompt: 'Apply a pulsing, iridescent metallic material with organic, flowing wave patterns that react to time specifically to the cube object.',
   sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. Bright, soft ambient global illumination with a main point light (sun) high above and to the right. The camera is positioned at a distance, providing a cinematic wide-angle view of the entire scene.',
   vertexShader: `
     varying vec2 vUv;
@@ -98,6 +99,7 @@ export const useShaderStore = create<ShaderState>((set) => ({
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
   setLastError: (lastError) => set({ lastError }),
   setIsCompiled: (isCompiled) => set({ isCompiled }),
+  clearLogs: () => set({ logs: [] }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
   setHeaderHeight: (headerHeight) => set({ headerHeight }),
   setActiveEditorTab: (activeEditorTab) => set({ activeEditorTab }),

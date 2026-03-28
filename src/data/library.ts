@@ -1,7 +1,7 @@
 export interface LibraryObject {
   id: string;
   name: string;
-  type: 'sphere' | 'box' | 'plane' | 'torus' | 'knot';
+  type: 'sphere' | 'box' | 'plane' | 'torus' | 'knot' | 'table' | 'chair' | 'cylinder' | 'pyramid';
   description: string;
 }
 
@@ -25,6 +25,10 @@ export const OBJECT_LIBRARY: LibraryObject[] = [
   { id: 'plane', name: 'Plane', type: 'plane', description: 'Flat 2D surface in 3D space' },
   { id: 'torus', name: 'Torus', type: 'torus', description: 'Donut-shaped ring' },
   { id: 'knot', name: 'Torus Knot', type: 'knot', description: 'Complex intertwined knot' },
+  { id: 'table', name: 'Table', type: 'table', description: 'A basic 4-legged table' },
+  { id: 'chair', name: 'Chair', type: 'chair', description: 'A basic chair with a backrest' },
+  { id: 'cylinder', name: 'Cylinder', type: 'cylinder', description: 'A classic tube or pillar' },
+  { id: 'pyramid', name: 'Pyramid', type: 'pyramid', description: 'A sharp 4-sided pyramid' },
 ];
 
 export const MATERIAL_LIBRARY: LibraryMaterial[] = [
@@ -55,7 +59,7 @@ export const MATERIAL_LIBRARY: LibraryMaterial[] = [
   { 
     id: 'voronoi', 
     name: 'Voronoi Cells', 
-    prompt: 'Moving voronoi cellular pattern with sharp edges and shifting colors based on distance to centers.',
+    prompt: 'Moving voronoi cellular patterns with sharp edges and shifting colors based on distance to centers.',
     description: 'Geometric organic cells'
   },
 ];

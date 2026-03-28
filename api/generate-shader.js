@@ -8,8 +8,7 @@ exports.handler = async (event) => {
   
   try {
     const body = JSON.parse(event.body || "{}");
-    console.log("Request Body:", JSON.stringify(body, null, 2));
-
+    
     const { 
       prompt, 
       sceneDescription = "",
@@ -23,10 +22,13 @@ exports.handler = async (event) => {
     } = body;
     
     if (!prompt && !sceneDescription && !lastError) {
-      return { statusCode: 400, body: JSON.stringify({ error: "No prompt provided" }) };
+      return { 
+        statusCode: 400, 
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ error: "No prompt provided" }) 
+      };
     }
 
-    // Library Context for AI
     const libraryContext = `
       LIBRARY MATERIALS:
       - 'Iridescent Metal': Pulsing, flowing wave patterns.
@@ -36,10 +38,10 @@ exports.handler = async (event) => {
       - 'Voronoi Cells': Shifting geometric organic patterns.
 
       AVAILABLE GEOMETRIES:
-      - 'sphere', 'box', 'plane', 'torus', 'knot'.
+      - Primitives: 'sphere', 'box' (or 'cube'), 'plane', 'torus', 'knot', 'cylinder', 'pyramid'.
+      - Complex (Composite): 'table', 'chair'.
     `;
 
-    // Comprehensive System Prompt
     let systemPrompt = `
       You are an expert Three.js and GLSL developer.
       Your task is to generate both a GLSL shader and a 3D scene configuration based on user descriptions.
@@ -53,11 +55,12 @@ exports.handler = async (event) => {
       3. "uniforms": An array of objects: { name, type, value, min, max }.
       4. "sceneObjects": An array of objects: { id, objectType, position, scale, rotation, color }.
 
-      INSTRUCTIONS:
-      - Use the user's SHADER GOAL to write the GLSL code.
-      - Use the user's SCENE GOAL to arrange objects in the sceneObjects array.
-      - If the user mentions a material from the library (e.g., "lava"), implement its logic in the shader.
-      - If the user mentions a geometry from the library, use it in sceneObjects.
+      SCENE CONFIGURATION:
+      - id: unique string.
+      - position: [x, y, z] (array of 3 numbers)
+      - scale: [x, y, z] (array of 3 numbers)
+      - rotation: [x, y, z] (array of 3 numbers in radians)
+      - Note: 'table' and 'chair' are composite objects; specify their overall position/scale.
 
       CRITICAL GLSL RULES:
       - DO NOT include "#version" directives.
@@ -69,7 +72,6 @@ exports.handler = async (event) => {
       - 'float', 'vec3', 'color' (hex string).
     `;
 
-    // Add Context
     if (isRefining || lastError) {
       systemPrompt += `
       CONTEXT:
@@ -110,12 +112,31 @@ exports.handler = async (event) => {
         rawContent = result.content[0].text;
     } else if (result.completion) {
         rawContent = result.completion;
+    } else if (result.text) {
+        rawContent = result.text;
+    }
+
+    if (!rawContent) {
+        throw new Error("Empty response from Bedrock model.");
     }
 
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("AI did not return valid JSON");
+    if (!jsonMatch) {
+        console.error("AI Response without JSON:", rawContent);
+        throw new Error("AI did not return a valid JSON object. Check logs for raw output.");
+    }
 
-    const shaderData = JSON.parse(jsonMatch[0].replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
+    // Aggressively clean the string: remove non-printable chars and ensure it ends at the last closing brace
+    let jsonString = jsonMatch[0].trim();
+    jsonString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+    
+    let shaderData;
+    try {
+        shaderData = JSON.parse(jsonString);
+    } catch (parseError) {
+        console.error("JSON Parse Error. String attempted:", jsonString);
+        throw new Error("Failed to parse AI-generated JSON: " + parseError.message);
+    }
 
     return {
       statusCode: 200,
@@ -129,10 +150,20 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error("CRITICAL ERROR:", error);
+    console.error("SHaider API Error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Internal Server Error", message: error.message }),
+      headers: { 
+        "Content-Type": "application/json", 
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      },
+      body: JSON.stringify({ 
+        error: "Internal Server Error", 
+        message: error.message,
+        details: "Check backend logs for full stack trace."
+      }),
     };
   }
 };
