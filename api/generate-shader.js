@@ -9,31 +9,47 @@ async function callOpenRouter(systemPrompt, userMessage) {
     throw new Error("OpenRouter API Key is missing. Please update it in AWS Secrets Manager.");
   }
 
-  console.log("[API] Falling back to OpenRouter (Free Model)...");
-  
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://github.com/komapc/shAIder",
-      "X-Title": "shAIder local"
-    },
-    body: JSON.stringify({
-      model: "meta-llama/llama-3.1-8b-instruct:free", // More reliable free model
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage }
-      ]
-    })
-  });
+  const models = [
+    "google/gemma-2-9b-it:free",
+    "qwen/qwen-2-7b-instruct:free",
+    "meta-llama/llama-3-8b-instruct:free"
+  ];
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(`OpenRouter Error: ${data.error?.message || response.statusText}`);
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      console.log(`[API] Trying OpenRouter model: ${model}...`);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://github.com/komapc/shAIder",
+          "X-Title": "shAIder local"
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || response.statusText);
+      }
+
+      return data.choices[0].message.content;
+    } catch (err) {
+      console.warn(`[API] Model ${model} failed:`, err.message);
+      lastError = err;
+    }
   }
 
-  return data.choices[0].message.content;
+  throw new Error(`All OpenRouter fallback models failed. Last error: ${lastError.message}`);
 }
 
 /**
