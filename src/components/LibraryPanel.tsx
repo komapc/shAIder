@@ -5,10 +5,10 @@ import { Box, Layers, Image as ImageIcon, Sparkles, ChevronRight } from 'lucide-
 
 const LibraryPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'materials' | 'objects' | 'textures'>('materials');
-  const { setPrompt, setObjectType, addLog } = useShaderStore();
+  const { setPrompt, setObjectType, addLog, prompt } = useShaderStore();
 
-  const handleApplyMaterial = (prompt: string, name: string) => {
-    setPrompt(prompt);
+  const handleApplyMaterial = (newPrompt: string, name: string) => {
+    setPrompt(newPrompt);
     addLog(`Library: Applied material "${name}". Hit Generate to compile.`);
   };
 
@@ -18,7 +18,7 @@ const LibraryPanel: React.FC = () => {
   };
 
   const handleApplyTexture = (name: string, url: string) => {
-    setPrompt((prev) => `${prev}\n\nUse this texture for mapping: ${url} (name it 'tDiffuse' in uniforms)`);
+    setPrompt(`${prompt}\n\nUse this texture for mapping: ${url} (name it 'tDiffuse' in uniforms)`);
     addLog(`Library: Added texture info for "${name}". Hit Generate to let AI implement it.`);
   };
 

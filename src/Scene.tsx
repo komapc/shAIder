@@ -48,8 +48,15 @@ const SingleObject: React.FC<{
             fragmentShader,
             uniforms: uniforms
         });
+        
         const dummyMesh = new THREE.Mesh(new THREE.BoxGeometry(), testMaterial);
-        gl.compile(dummyMesh, new THREE.Scene(), new THREE.Camera());
+        const dummyScene = new THREE.Scene();
+        dummyScene.add(dummyMesh);
+        const dummyCamera = new THREE.Camera();
+        
+        // This triggers compilation
+        gl.compile(dummyScene, dummyCamera);
+        
         if (materialRef.current) {
             materialRef.current.needsUpdate = true;
         }
@@ -130,7 +137,6 @@ const UniformsManager: React.FC<{
   );
 
   // Pre-load all textures
-  // useLoader can take an array of URLs
   const loadedTextures = useLoader(THREE.TextureLoader, textureUrls.length > 0 ? textureUrls : []);
   
   // Create a mapping of URL -> Texture
@@ -170,6 +176,7 @@ const Scene: React.FC = () => {
     isCompiled, addLog, setLastError, setIsCompiled
   } = useShaderStore();
   
+  // Register the global error callback defined in main.tsx
   useEffect(() => {
     window.__GLSL_ERROR_CALLBACK__ = (message: string) => {
       setTimeout(() => {
@@ -179,6 +186,8 @@ const Scene: React.FC = () => {
         setLastError(errorLines.length > 0 ? errorLines.join('\n') : message);
       }, 0);
     };
+    
+    // Also connect to local globalState for the interceptor defined in this file
     globalState.addLog = addLog;
     globalState.setLastError = setLastError;
     globalState.setIsCompiled = setIsCompiled;
