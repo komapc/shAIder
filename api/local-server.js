@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const { handler } = require("./generate-shader");
+const { loadSecrets } = require("./secrets");
 
 const app = express();
 const port = 3001;
@@ -27,6 +28,11 @@ app.post("/api/generate-shader", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Local shAIder API server running at http://localhost:${port}`);
-});
+(async () => {
+  // Load secrets from AWS Secrets Manager before starting
+  await loadSecrets();
+
+  app.listen(port, () => {
+    console.log(`Local shAIder API server running at http://localhost:${port}`);
+  });
+})();

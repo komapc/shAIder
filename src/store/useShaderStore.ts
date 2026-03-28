@@ -17,6 +17,7 @@ interface Uniform {
 
 interface ShaderState {
   prompt: string;
+  sceneDescription: string;
   vertexShader: string;
   fragmentShader: string;
   uniforms: Uniform[];
@@ -24,17 +25,21 @@ interface ShaderState {
   isLoading: boolean;
   logs: string[];
   lastError: string | null;
+  isSidebarVisible: boolean;
   
   setPrompt: (prompt: string) => void;
+  setSceneDescription: (description: string) => void;
   setShaders: (vertex: string, fragment: string, uniforms: Uniform[], sceneConfig: SceneConfig) => void;
   updateUniform: (name: string, value: any) => void;
   setLoading: (loading: boolean) => void;
   addLog: (log: string) => void;
   setLastError: (error: string | null) => void;
+  toggleSidebar: () => void;
 }
 
 export const useShaderStore = create<ShaderState>((set) => ({
   prompt: '',
+  sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. A bright point light source (sun) positioned high above and slightly to the right.',
   vertexShader: `
     varying vec2 vUv;
     void main() {
@@ -61,8 +66,10 @@ export const useShaderStore = create<ShaderState>((set) => ({
   isLoading: false,
   logs: [],
   lastError: null,
+  isSidebarVisible: true,
 
   setPrompt: (prompt) => set({ prompt }),
+  setSceneDescription: (sceneDescription) => set({ sceneDescription }),
   setShaders: (vertex, fragment, uniforms, sceneConfig) => 
     set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneConfig, lastError: null }),
   updateUniform: (name, value) => set((state) => ({
@@ -71,4 +78,5 @@ export const useShaderStore = create<ShaderState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
   setLastError: (lastError) => set({ lastError }),
+  toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
 }));

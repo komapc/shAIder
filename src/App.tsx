@@ -4,7 +4,7 @@ import { useShaderStore } from './store/useShaderStore';
 import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
-import { Play, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft } from 'lucide-react';
 
 const App: React.FC = () => {
   const { 
@@ -15,18 +15,22 @@ const App: React.FC = () => {
     uniforms,
     sceneConfig,
     prompt,
+    sceneDescription,
     lastError,
+    isSidebarVisible,
     setPrompt,
+    setSceneDescription,
     setLoading,
     setShaders,
-    addLog
+    addLog,
+    toggleSidebar
   } = useShaderStore();
 
   const handleGenerate = async (isRefining = false) => {
-    if (!prompt && !lastError) return;
+    if (!prompt && !sceneDescription && !lastError) return;
     
     setLoading(true);
-    addLog(isRefining ? "Refining shader..." : lastError ? `Fixing error: ${lastError.substring(0, 50)}...` : "Generating new shader...");
+    addLog(isRefining ? "Refining scene..." : lastError ? `Fixing error: ${lastError.substring(0, 50)}...` : "Generating new scene...");
 
     try {
       const response = await fetch('/api/generate-shader', {
@@ -34,6 +38,7 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt, 
+          sceneDescription,
           isRefining,
           currentVertexShader: vertexShader,
           currentFragmentShader: fragmentShader,
@@ -58,39 +63,86 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
       {/* Top Header/Prompt Area */}
-      <div className="p-4 border-b border-gray-800 bg-[#111] shadow-xl z-10">
-        <div className="max-w-7xl mx-auto flex gap-4 items-start">
-          <div className="flex-1 relative group">
+      <div className="p-6 border-b border-gray-800 bg-[#111] shadow-xl z-10">
+        <div className="w-full flex gap-8 items-start">
+          
+          <button 
+            onClick={toggleSidebar}
+            className="mt-6 p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-lg transition-colors"
+            title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+          >
+            {isSidebarVisible ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
+          </button>
+
+          {/* Shader Prompt */}
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Shader Description</label>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => handleGenerate(false)}
+                        className="text-[10px] text-blue-400 hover:text-blue-300 transition-colors font-bold uppercase tracking-tighter flex items-center gap-1"
+                    >
+                        Generate <Sparkles size={10} />
+                    </button>
+                    <button 
+                        onClick={() => handleGenerate(true)}
+                        className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors font-bold uppercase tracking-tighter"
+                    >
+                        Refine
+                    </button>
+                </div>
+            </div>
             <textarea 
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe your shader... (e.g., 'A metallic pulsing sphere')"
-              rows={2}
-              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-2.5 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto"
+              placeholder="Describe the visual effect... (e.g., 'A metallic pulsing sphere')"
+              rows={4}
+              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner"
             />
           </div>
-          <div className="flex flex-col gap-2">
+
+          {/* Scene Prompt */}
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Scene Description</label>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => handleGenerate(false)}
+                        className="text-[10px] text-blue-400 hover:text-blue-300 transition-colors font-bold uppercase tracking-tighter flex items-center gap-1"
+                    >
+                        Generate <Sparkles size={10} />
+                    </button>
+                    <button 
+                        onClick={() => handleGenerate(true)}
+                        className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors font-bold uppercase tracking-tighter"
+                    >
+                        Refine
+                    </button>
+                </div>
+            </div>
+            <textarea 
+              value={sceneDescription}
+              onChange={(e) => setSceneDescription(e.target.value)}
+              placeholder="Describe the scene layout... (e.g., 'A table with a cube on it')"
+              rows={4}
+              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 pt-6">
             <button 
               onClick={() => handleGenerate(false)}
               disabled={isLoading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20 w-full"
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-10 py-3 rounded-lg font-bold text-sm transition-all active:scale-95 shadow-lg shadow-blue-600/20"
             >
               <Play size={16} fill="currentColor" />
-              Generate
+              Run All
             </button>
-            <div className="flex gap-2">
-               <button 
-                 onClick={() => handleGenerate(true)}
-                 disabled={isLoading}
-                 className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-[#222] hover:bg-[#2a2a2a] disabled:opacity-50 rounded-lg text-xs font-medium text-gray-300 transition-colors"
-               >
-                  Refine
-               </button>
-               <button className="flex-1 flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
-                  <RotateCcw size={14} />
-                  Reset
-               </button>
-            </div>
+            <button className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+               <RotateCcw size={14} />
+               Reset
+            </button>
           </div>
         </div>
       </div>
@@ -98,23 +150,25 @@ const App: React.FC = () => {
       {/* Main Grid Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Editors & Params */}
-        <div className="w-1/3 flex flex-col border-r border-gray-800 bg-[#111] shadow-2xl z-20">
-          <div className="h-1/3">
-             <ParametersPanel />
+        {isSidebarVisible && (
+          <div className="w-1/3 flex flex-col border-r border-gray-800 bg-[#111] shadow-2xl z-20">
+            <div className="h-1/3">
+               <ParametersPanel />
+            </div>
+            <div className="flex-1 flex flex-col min-h-0 border-t border-gray-800">
+              <ShaderEditor 
+                label="Vertex Shader" 
+                value={vertexShader} 
+                onChange={() => {}} 
+              />
+              <ShaderEditor 
+                label="Fragment Shader" 
+                value={fragmentShader} 
+                onChange={() => {}} 
+              />
+            </div>
           </div>
-          <div className="flex-1 flex flex-col min-h-0 border-t border-gray-800">
-            <ShaderEditor 
-              label="Vertex Shader" 
-              value={vertexShader} 
-              onChange={() => {}} // Read-only for now in this dummy
-            />
-            <ShaderEditor 
-              label="Fragment Shader" 
-              value={fragmentShader} 
-              onChange={() => {}} 
-            />
-          </div>
-        </div>
+        )}
 
         {/* Right Side: 3D Scene */}
         <div className="flex-1 relative bg-[#050505]">
