@@ -1,14 +1,12 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 
-/**
- * Vitest configuration for the shAIder project.
- * Uses jsdom for React component testing.
- */
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],
   },
 });

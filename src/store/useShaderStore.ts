@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
-interface SceneConfig {
+export interface SceneObject {
+  id: string;
   objectType: string;
   position: [number, number, number];
   scale: [number, number, number];
   rotation: [number, number, number];
+  color?: string;
 }
 
 interface Uniform {
@@ -21,25 +23,34 @@ interface ShaderState {
   vertexShader: string;
   fragmentShader: string;
   uniforms: Uniform[];
-  sceneConfig: SceneConfig;
+  sceneObjects: SceneObject[];
   isLoading: boolean;
   logs: string[];
   lastError: string | null;
   isSidebarVisible: boolean;
+  headerHeight: number;
+  isCompiled: boolean;
+  activeEditorTab: 'vertex' | 'fragment' | 'scene';
   
   setPrompt: (prompt: string) => void;
   setSceneDescription: (description: string) => void;
-  setShaders: (vertex: string, fragment: string, uniforms: Uniform[], sceneConfig: SceneConfig) => void;
+  setVertexShader: (code: string) => void;
+  setFragmentShader: (code: string) => void;
+  setShaders: (vertex: string, fragment: string, uniforms: Uniform[], sceneObjects: SceneObject[]) => void;
   updateUniform: (name: string, value: any) => void;
   setLoading: (loading: boolean) => void;
   addLog: (log: string) => void;
   setLastError: (error: string | null) => void;
+  setIsCompiled: (isCompiled: boolean) => void;
   toggleSidebar: () => void;
+  setHeaderHeight: (height: number) => void;
+  setActiveEditorTab: (tab: 'vertex' | 'fragment' | 'scene') => void;
+  setObjectType: (type: string) => void;
 }
 
 export const useShaderStore = create<ShaderState>((set) => ({
   prompt: 'A pulsing, iridescent metallic material with organic, flowing wave patterns that react to time.',
-  sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. A bright point light source (sun) positioned high above and slightly to the right.',
+  sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. Bright, soft ambient global illumination with a main point light (sun) high above and to the right. The camera is positioned at a distance, providing a cinematic wide-angle view of the entire scene.',
   vertexShader: `
     varying vec2 vUv;
     void main() {
@@ -57,26 +68,42 @@ export const useShaderStore = create<ShaderState>((set) => ({
   uniforms: [
     { name: 'time', type: 'float', value: 0, min: 0, max: 10 },
   ],
-  sceneConfig: {
-    objectType: 'sphere',
-    position: [0, 0, 0],
-    scale: [1, 1, 1],
-    rotation: [0, 0, 0],
-  },
+  sceneObjects: [
+    {
+      id: 'main-obj',
+      objectType: 'sphere',
+      position: [0, 0, 0],
+      scale: [1, 1, 1],
+      rotation: [0, 0, 0],
+    }
+  ],
   isLoading: false,
   logs: [],
   lastError: null,
   isSidebarVisible: true,
+  headerHeight: 220,
+  isCompiled: true,
+  activeEditorTab: 'fragment',
 
   setPrompt: (prompt) => set({ prompt }),
   setSceneDescription: (sceneDescription) => set({ sceneDescription }),
-  setShaders: (vertex, fragment, uniforms, sceneConfig) => 
-    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneConfig, lastError: null }),
+  setVertexShader: (vertexShader) => set({ vertexShader, lastError: null, isCompiled: true }),
+  setFragmentShader: (fragmentShader) => set({ fragmentShader, lastError: null, isCompiled: true }),
+  setShaders: (vertex, fragment, uniforms, sceneObjects) => 
+    set({ vertexShader: vertex, fragmentShader: fragment, uniforms, sceneObjects, lastError: null, isCompiled: true }),
   updateUniform: (name, value) => set((state) => ({
     uniforms: state.uniforms.map(u => u.name === name ? { ...u, value } : u)
   })),
   setLoading: (isLoading) => set({ isLoading }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
   setLastError: (lastError) => set({ lastError }),
+  setIsCompiled: (isCompiled) => set({ isCompiled }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
+  setHeaderHeight: (headerHeight) => set({ headerHeight }),
+  setActiveEditorTab: (activeEditorTab) => set({ activeEditorTab }),
+  setObjectType: (objectType) => set((state) => ({ 
+    sceneObjects: state.sceneObjects.map(obj => 
+      obj.id === 'main-obj' ? { ...obj, objectType } : obj
+    )
+  })),
 }));

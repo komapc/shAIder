@@ -17,6 +17,7 @@ exports.handler = async (event) => {
       currentVertexShader = "", 
       currentFragmentShader = "", 
       currentUniforms = [],
+      currentSceneObjects = [],
       lastError = "",
       modelId = "anthropic.claude-3-haiku-20240307-v1:0" 
     } = body;
@@ -25,35 +26,47 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: "No prompt provided" }) };
     }
 
-    // Comprehensive System Prompt with strict GLSL rules
+    // Library Context for AI
+    const libraryContext = `
+      LIBRARY MATERIALS:
+      - 'Iridescent Metal': Pulsing, flowing wave patterns.
+      - 'Molten Lava': Glowing orange-red noise-based magma.
+      - 'Frosted Glass': Semi-transparent blurred refraction.
+      - 'Digital Hologram': Sci-fi blue glowing flickers.
+      - 'Voronoi Cells': Shifting geometric organic patterns.
+
+      AVAILABLE GEOMETRIES:
+      - 'sphere', 'box', 'plane', 'torus', 'knot'.
+    `;
+
+    // Comprehensive System Prompt
     let systemPrompt = `
       You are an expert Three.js and GLSL developer.
       Your task is to generate both a GLSL shader and a 3D scene configuration based on user descriptions.
+
+      ${libraryContext}
 
       OUTPUT FORMAT:
       You MUST return a strict JSON object with EXACTLY these four keys:
       1. "vertexShader": A GLSL vertex shader string.
       2. "fragmentShader": A GLSL fragment shader string.
       3. "uniforms": An array of objects: { name, type, value, min, max }.
-      4. "sceneConfig": An object describing the primary object: { objectType, position, scale, rotation }.
+      4. "sceneObjects": An array of objects: { id, objectType, position, scale, rotation, color }.
+
+      INSTRUCTIONS:
+      - Use the user's SHADER GOAL to write the GLSL code.
+      - Use the user's SCENE GOAL to arrange objects in the sceneObjects array.
+      - If the user mentions a material from the library (e.g., "lava"), implement its logic in the shader.
+      - If the user mentions a geometry from the library, use it in sceneObjects.
 
       CRITICAL GLSL RULES:
-      - DO NOT include "#version" directives. Three.js will add them automatically.
-      - DO NOT use "layout (location = X)" syntax. Use standard "attribute" or "varying" for WebGL 1.0/2.0 compatibility in Three.js.
+      - DO NOT include "#version" directives.
+      - DO NOT use "layout (location = X)" syntax.
       - In the Fragment Shader, always declare "precision highp float;".
       - Ensure "time" (float) and "resolution" (vec2) uniforms are declared if used.
-      - If you need a color, use a "vec3" and declare it in the uniforms as type: 'color' with a hex string value.
-
-      SCENE CONFIGURATION:
-      - objectType: One of 'sphere', 'box', 'plane', 'torus', 'knot'.
-      - position: [x, y, z] (array of 3 numbers)
-      - scale: [x, y, z] (array of 3 numbers)
-      - rotation: [x, y, z] (array of 3 numbers in radians)
 
       UNIFORM TYPES:
-      - 'float': value is a number.
-      - 'vec3': value is [x, y, z].
-      - 'color': value is a hex string (e.g., "#ff0000").
+      - 'float', 'vec3', 'color' (hex string).
     `;
 
     // Add Context
@@ -63,6 +76,7 @@ exports.handler = async (event) => {
       - Current Vertex Shader: \`${currentVertexShader}\`
       - Current Fragment Shader: \`${currentFragmentShader}\`
       - Current Uniforms: ${JSON.stringify(currentUniforms)}
+      - Current Scene Objects: ${JSON.stringify(currentSceneObjects)}
       ${lastError ? `- LAST ERROR: ${lastError}` : ""}
       `;
     }
@@ -71,7 +85,7 @@ exports.handler = async (event) => {
       SHADER GOAL: ${prompt || "Maintain current visual effect"}
       SCENE GOAL: ${sceneDescription || "Maintain current layout"}
       
-      ${lastError ? "The previous shader failed to compile with the error above. Please fix it by following the CRITICAL GLSL RULES carefully." : "Generate the JSON object now."}
+      ${lastError ? "The previous shader failed to compile. Please fix it based on the error provided." : "Generate the JSON object now."}
     `;
 
     const payload = {
@@ -91,14 +105,17 @@ exports.handler = async (event) => {
     const response = await client.send(command);
     const result = JSON.parse(new TextDecoder().decode(response.body));
     
-    const rawContent = result.content[0].text;
-    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-        throw new Error("AI did not return a valid JSON object: " + rawContent);
+    let rawContent = "";
+    if (result.content && Array.isArray(result.content)) {
+        rawContent = result.content[0].text;
+    } else if (result.completion) {
+        rawContent = result.completion;
     }
 
-    const shaderData = JSON.parse(jsonMatch[0]);
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI did not return valid JSON");
+
+    const shaderData = JSON.parse(jsonMatch[0].replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
 
     return {
       statusCode: 200,
@@ -112,10 +129,10 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error("CRITICAL ERROR in generate-shader handler:", error);
+    console.error("CRITICAL ERROR:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Internal Server Error", message: error.message, stack: error.stack }),
+      body: JSON.stringify({ error: "Internal Server Error", message: error.message }),
     };
   }
 };

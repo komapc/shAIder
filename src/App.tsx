@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useShaderStore } from './store/useShaderStore';
 import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft } from 'lucide-react';
+import LibraryPanel from './components/LibraryPanel';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, AlertTriangle, Code, FileJson } from 'lucide-react';
 
 const App: React.FC = () => {
   const { 
@@ -13,18 +14,52 @@ const App: React.FC = () => {
     vertexShader, 
     fragmentShader, 
     uniforms,
-    sceneConfig,
+    sceneObjects,
     prompt,
     sceneDescription,
     lastError,
     isSidebarVisible,
+    headerHeight,
+    isCompiled,
+    activeEditorTab,
     setPrompt,
     setSceneDescription,
+    setVertexShader,
+    setFragmentShader,
     setLoading,
     setShaders,
     addLog,
-    toggleSidebar
+    toggleSidebar,
+    setHeaderHeight,
+    setActiveEditorTab
   } = useShaderStore();
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newHeight = Math.max(100, Math.min(e.clientY, window.innerHeight * 0.7));
+      setHeaderHeight(newHeight);
+    }
+  }, [isResizing, setHeaderHeight]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   const handleGenerate = async (isRefining = false) => {
     if (!prompt && !sceneDescription && !lastError) return;
@@ -43,6 +78,7 @@ const App: React.FC = () => {
           currentVertexShader: vertexShader,
           currentFragmentShader: fragmentShader,
           currentUniforms: uniforms,
+          currentSceneObjects: sceneObjects,
           lastError: lastError
         })
       });
@@ -50,7 +86,7 @@ const App: React.FC = () => {
       if (!response.ok) throw new Error('API request failed');
 
       const data = await response.json();
-      setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneConfig);
+      setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
       addLog("Compilation successful.");
     } catch (error: any) {
       console.error(error);
@@ -62,20 +98,39 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
+      {/* Error Banner */}
+      {!isCompiled && (
+        <div className="bg-red-600/20 border-b border-red-600/40 px-6 py-2 flex items-center gap-3 animate-in slide-in-from-top duration-300">
+           <AlertTriangle className="text-red-500" size={16} />
+           <span className="text-xs font-bold text-red-200 uppercase tracking-widest">
+             Shader compilation failed. See editors for details.
+           </span>
+           <button 
+             onClick={() => handleGenerate(true)}
+             className="ml-auto bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-colors"
+           >
+             FIX WITH AI (REFINE)
+           </button>
+        </div>
+      )}
+
       {/* Top Header/Prompt Area */}
-      <div className="p-6 border-b border-gray-800 bg-[#111] shadow-xl z-10">
-        <div className="w-full flex gap-8 items-start">
+      <div 
+        className="relative border-b border-gray-800 bg-[#111] shadow-xl z-10 overflow-hidden"
+        style={{ height: `${headerHeight}px` }}
+      >
+        <div className="p-6 h-full w-full flex gap-8 items-start overflow-y-auto">
           
           <button 
             onClick={toggleSidebar}
-            className="mt-6 p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-lg transition-colors"
+            className="mt-6 p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-lg transition-colors flex-shrink-0"
             title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
           >
             {isSidebarVisible ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
           </button>
 
           {/* Shader Prompt */}
-          <div className="flex-1 flex flex-col gap-2">
+          <div className="flex-1 flex flex-col gap-2 h-full">
             <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Shader Description</label>
                 <div className="flex gap-3">
@@ -97,13 +152,12 @@ const App: React.FC = () => {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe the visual effect... (e.g., 'A metallic pulsing sphere')"
-              rows={4}
-              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner"
+              className="flex-1 w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner min-h-0"
             />
           </div>
 
           {/* Scene Prompt */}
-          <div className="flex-1 flex flex-col gap-2">
+          <div className="flex-1 flex flex-col gap-2 h-full">
             <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Scene Description</label>
                 <div className="flex gap-3">
@@ -125,12 +179,11 @@ const App: React.FC = () => {
               value={sceneDescription}
               onChange={(e) => setSceneDescription(e.target.value)}
               placeholder="Describe the scene layout... (e.g., 'A table with a cube on it')"
-              rows={4}
-              className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner"
+              className="flex-1 w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 pl-5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm placeholder:text-gray-600 resize-none overflow-y-auto shadow-inner min-h-0"
             />
           </div>
 
-          <div className="flex flex-col gap-2 pt-6">
+          <div className="flex flex-col gap-2 pt-6 flex-shrink-0">
             <button 
               onClick={() => handleGenerate(false)}
               disabled={isLoading}
@@ -145,6 +198,16 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Resizer Handle */}
+        <div 
+          onMouseDown={startResizing}
+          className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-blue-500/50 transition-colors flex items-center justify-center group"
+        >
+          <div className="hidden group-hover:flex items-center justify-center bg-blue-500 rounded-full w-8 h-4 shadow-lg translate-y-[-2px]">
+            <GripHorizontal size={12} />
+          </div>
+        </div>
       </div>
 
       {/* Main Grid Area */}
@@ -152,20 +215,63 @@ const App: React.FC = () => {
         {/* Left Side: Editors & Params */}
         {isSidebarVisible && (
           <div className="w-1/3 flex flex-col border-r border-gray-800 bg-[#111] shadow-2xl z-20">
-            <div className="h-1/3">
+            <div className="h-1/3 min-h-[150px]">
                <ParametersPanel />
             </div>
-            <div className="flex-1 flex flex-col min-h-0 border-t border-gray-800">
-              <ShaderEditor 
-                label="Vertex Shader" 
-                value={vertexShader} 
-                onChange={() => {}} 
-              />
-              <ShaderEditor 
-                label="Fragment Shader" 
-                value={fragmentShader} 
-                onChange={() => {}} 
-              />
+            
+            {/* Editor Tab Switcher */}
+            <div className="flex border-t border-gray-800 bg-[#1a1a1a]">
+                <button 
+                    onClick={() => setActiveEditorTab('vertex')}
+                    className={`flex-1 py-2 px-1 text-[9px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1 border-r border-gray-800 transition-colors ${activeEditorTab === 'vertex' ? 'text-blue-400 bg-[#111]' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    <Code size={10} /> Vertex
+                </button>
+                <button 
+                    onClick={() => setActiveEditorTab('fragment')}
+                    className={`flex-1 py-2 px-1 text-[9px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1 border-r border-gray-800 transition-colors ${activeEditorTab === 'fragment' ? 'text-blue-400 bg-[#111]' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    <Code size={10} /> Fragment
+                </button>
+                <button 
+                    onClick={() => setActiveEditorTab('scene')}
+                    className={`flex-1 py-2 px-1 text-[9px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1 transition-colors ${activeEditorTab === 'scene' ? 'text-blue-400 bg-[#111]' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    <FileJson size={10} /> Scene JSON
+                </button>
+            </div>
+
+            <div className="flex-1 flex flex-col min-h-0 border-t border-gray-800 relative">
+              {activeEditorTab === 'vertex' && (
+                <ShaderEditor 
+                    label="Vertex Shader" 
+                    value={vertexShader} 
+                    onChange={setVertexShader} 
+                    isError={!isCompiled}
+                />
+              )}
+              {activeEditorTab === 'fragment' && (
+                <ShaderEditor 
+                    label="Fragment Shader" 
+                    value={fragmentShader} 
+                    onChange={setFragmentShader} 
+                    isError={!isCompiled}
+                />
+              )}
+              {activeEditorTab === 'scene' && (
+                <ShaderEditor 
+                    label="Scene Configuration (JSON)" 
+                    value={JSON.stringify(sceneObjects, null, 2)} 
+                    onChange={(val) => {
+                        try {
+                            const parsed = JSON.parse(val);
+                            if (Array.isArray(parsed)) {
+                                useShaderStore.setState({ sceneObjects: parsed });
+                            }
+                        } catch (e) { /* silent fail while typing */ }
+                    }} 
+                />
+              )}
             </div>
           </div>
         )}
@@ -206,6 +312,9 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Right Library Panel */}
+        <LibraryPanel />
       </div>
     </div>
   );
