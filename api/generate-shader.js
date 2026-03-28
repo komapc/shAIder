@@ -12,7 +12,8 @@ async function callOpenRouter(systemPrompt, userMessage) {
   const models = [
     "google/gemma-2-9b-it:free",
     "qwen/qwen-2-7b-instruct:free",
-    "meta-llama/llama-3-8b-instruct:free"
+    "meta-llama/llama-3-8b-instruct:free",
+    "anthropic/claude-3-haiku" // Final fallback: extremely cheap and stable
   ];
 
   let lastError = null;
@@ -116,6 +117,7 @@ exports.handler = async (event) => {
       - DO NOT include "#version" directives.
       - DO NOT use "layout (location = X)" syntax.
       - In the Fragment Shader, always declare "precision highp float;".
+      - Uniforms (like "time", "resolution", or custom ones) MUST be declared in BOTH the Vertex and Fragment shaders if they are used in both.
       - Ensure "time" (float) and "resolution" (vec2) uniforms are declared if used.
     `;
 

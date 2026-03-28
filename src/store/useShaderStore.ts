@@ -54,9 +54,17 @@ export const useShaderStore = create<ShaderState>((set) => ({
   sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. Bright, soft ambient global illumination with a main point light (sun) high above and to the right. The camera is positioned at a distance, providing a cinematic wide-angle view of the entire scene.',
   vertexShader: `
     varying vec2 vUv;
+    uniform float time;
+    
     void main() {
       vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      
+      // Example: Use time to displace vertices (waving effect)
+      vec3 pos = position;
+      pos.z += sin(pos.x * 5.0 + time) * 0.1;
+      pos.y += cos(pos.y * 5.0 + time) * 0.1;
+      
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
   fragmentShader: `
