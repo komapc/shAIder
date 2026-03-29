@@ -4,8 +4,6 @@ backend:
     build:
       commands:
         - npm install
-        - npm install -g esbuild
-        - docker version || echo "Docker not found"
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
