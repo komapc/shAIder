@@ -1,0 +1,3 @@
+type Mutation {
+  generateShader(prompt: String!, sceneDescription: String, isRefining: Boolean, currentVertexShader: String, currentFragmentShader: String, currentUniforms: AWSJSON, currentSceneObjects: AWSJSON, lastError: String): String @function(name: "FnGenerateShader") @auth(rules: [{allow: public, provider: apiKey}])
+}
