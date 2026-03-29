@@ -64,6 +64,10 @@ export const handler = async (event: any) => {
     const libraryContext = `
       LIBRARY MATERIALS: 'Iridescent Metal', 'Molten Lava', 'Frosted Glass', 'Digital Hologram', 'Voronoi Cells'.
       AVAILABLE GEOMETRIES: 'sphere', 'box', 'plane', 'torus', 'knot', 'cylinder', 'pyramid', 'floor', 'table', 'chair'.
+      AVAILABLE CC0 TEXTURES (use these URLs for 'texture' type uniforms):
+      - wood: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_wooden_planks/dark_wooden_planks_diff_2k.jpg
+      - marble: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/white_marble/white_marble_diff_2k.jpg
+      - iron: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/scratched_iron/scratched_iron_diff_2k.jpg
     `;
 
     let systemPrompt = `

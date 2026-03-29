@@ -1,0 +1,20 @@
+[
+  {
+    "id": "wood-dark",
+    "name": "Dark Wooden Planks",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_wooden_planks/dark_wooden_planks_diff_2k.jpg",
+    "description": "Dark weathered wooden planks, great for floors or tables."
+  },
+  {
+    "id": "marble-white",
+    "name": "White Marble",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/white_marble/white_marble_diff_2k.jpg",
+    "description": "Elegant white marble with natural grey veining."
+  },
+  {
+    "id": "iron-scratched",
+    "name": "Scratched Iron",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/scratched_iron/scratched_iron_diff_2k.jpg",
+    "description": "Industrial scratched iron, ideal for metallic objects."
+  }
+]

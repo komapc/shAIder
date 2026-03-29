@@ -5,12 +5,13 @@ import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw, Download } from 'lucide-react';
 
 // Amplify Integration
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import { configureAmplify } from './amplify-config';
+import { generateStandaloneHtml } from './utils/exportHtml';
 
 const client = generateClient<any>();
 
@@ -74,6 +75,18 @@ const App: React.FC = () => {
       window.removeEventListener('mouseup', stopResizing);
     };
   }, [resize, stopResizing]);
+
+  const handleExport = () => {
+    const html = generateStandaloneHtml(vertexShader, fragmentShader, uniforms, sceneObjects);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shaider-export.html';
+    a.click();
+    URL.revokeObjectURL(url);
+    addLog("Exported scene to HTML.");
+  };
 
   const handleGenerate = async (isRefining = false) => {
     if (!prompt && !sceneDescription && !lastError) return;
@@ -255,10 +268,19 @@ const App: React.FC = () => {
               <Play size={16} fill="currentColor" />
               Run All
             </button>
-            <button className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
-               <RotateCcw size={14} />
-               Reset
-            </button>
+            <div className="flex gap-2 justify-center">
+                <button className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+                   <RotateCcw size={14} />
+                   Reset
+                </button>
+                <button 
+                  onClick={handleExport}
+                  className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium border-l border-gray-800"
+                >
+                   <Download size={14} />
+                   Export
+                </button>
+            </div>
           </div>
         </div>
 
