@@ -1,4 +1,5 @@
 import { defineBackend } from '@aws-amplify/backend';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { data, generateShader } from './data/resource';
 
 const backend = defineBackend({
@@ -7,10 +8,9 @@ const backend = defineBackend({
 });
 
 // Grant the function permission to call Bedrock
-const bedrockPolicyStatement = {
-  Effect: 'Allow',
-  Action: ['bedrock:InvokeModel'],
-  Resource: ['*'],
-};
-
-backend.generateShader.resources.lambda.addToRolePolicy(bedrockPolicyStatement);
+backend.generateShader.resources.lambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ['bedrock:InvokeModel'],
+    resources: ['*'],
+  })
+);
