@@ -1,6 +1,5 @@
 import { defineBackend } from '@aws-amplify/backend';
-import { data } from './data/resource';
-import { generateShader } from './functions/generate-shader/resource';
+import { data, generateShader } from './data/resource';
 
 const backend = defineBackend({
   data,
