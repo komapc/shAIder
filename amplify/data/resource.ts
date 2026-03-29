@@ -1,5 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
-import { generateShader } from '../backend';
+import { generateShader } from '../functions/generate-shader/resource';
 
 const schema = a.schema({
   generateShader: a

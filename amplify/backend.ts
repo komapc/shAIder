@@ -1,29 +1,13 @@
-import { defineBackend, defineFunction, secret } from '@aws-amplify/backend';
+import { defineBackend } from '@aws-amplify/backend';
 import { data } from './data/resource';
+import { generateShader } from './functions/generate-shader/resource';
 
-/**
- * 1. DEFINE FUNCTIONS FIRST
- */
-export const generateShader = defineFunction({
-  name: 'generate-shader',
-  entry: './functions/generate-shader/handler.ts',
-  environment: {
-    OPENROUTER_API_KEY: secret('OPENROUTER_API_KEY')
-  },
-  timeoutSeconds: 60
-});
-
-/**
- * 2. ASSEMBLE BACKEND
- */
 const backend = defineBackend({
   data,
   generateShader,
 });
 
-/**
- * 3. GRANT PERMISSIONS
- */
+// Grant the function permission to call Bedrock
 const bedrockPolicyStatement = {
   Effect: 'Allow',
   Action: ['bedrock:InvokeModel'],
