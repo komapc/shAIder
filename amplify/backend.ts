@@ -1,9 +1,8 @@
-import { defineBackend, defineFunction, secret } from '@aws-amplify/backend';
-import { data } from './data/resource';
+import { defineBackend, defineFunction, secret, a, defineData } from '@aws-amplify/backend';
 
 /**
- * 1. DEFINE FUNCTIONS
- * Defining them in the same file to resolve persistent "module does not provide an export" errors in cloud build.
+ * 1. DEFINE FUNCTIONS FIRST
+ * This avoids "Cannot access before initialization" errors during synth.
  */
 export const generateShader = defineFunction({
   name: 'generate-shader',
@@ -15,15 +14,43 @@ export const generateShader = defineFunction({
 });
 
 /**
- * 2. DEFINE BACKEND
+ * 2. DEFINE DATA SCHEMA
+ * Moving this here to resolve circular dependency between backend.ts and data/resource.ts
+ */
+const schema = a.schema({
+  generateShader: a
+    .mutation()
+    .arguments({
+      prompt: a.string().required(),
+      sceneDescription: a.string(),
+      isRefining: a.boolean(),
+      currentVertexShader: a.string(),
+      currentFragmentShader: a.string(),
+      currentUniforms: a.json(),
+      currentSceneObjects: a.json(),
+      lastError: a.string(),
+    })
+    .returns(a.string())
+    .handler(a.handler.function(generateShader))
+    .authorization((allow) => [allow.publicApiKey()]),
+});
+
+/**
+ * 3. ASSEMBLE BACKEND
  */
 const backend = defineBackend({
-  data,
+  data: defineData({
+    schema,
+    authorizationModes: {
+      defaultAuthorizationMode: 'apiKey',
+      apiKeyConfig: { expiresInDays: 30 },
+    },
+  }),
   generateShader,
 });
 
 /**
- * 3. GRANT PERMISSIONS
+ * 4. GRANT PERMISSIONS
  */
 const bedrockPolicyStatement = {
   Effect: 'Allow',
