@@ -7,7 +7,8 @@ export const generateShader = defineFunction({
   environment: {
     OPENROUTER_API_KEY: secret('OPENROUTER_API_KEY')
   },
-  timeoutSeconds: 60
+  timeoutSeconds: 60,
+  runtime: 20, // Node.js 20
 });
 
 const schema = a.schema({
