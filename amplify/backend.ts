@@ -1,7 +1,7 @@
 import { defineBackend, defineFunction, secret, a, defineData } from '@aws-amplify/backend';
 
 // 1. Define the Function
-export const generateShader = defineFunction({
+const generateShader = defineFunction({
   name: 'generate-shader',
   entry: './functions/generate-shader/handler.ts',
   environment: {
@@ -26,7 +26,7 @@ const schema = a.schema({
     })
     .returns(a.string())
     .handler(a.handler.function(generateShader))
-    .authorization((allow) => [a.allow.public()]),
+    .authorization((allow) => [allow.publicApiKey()]),
 });
 
 // 3. Assemble Backend
