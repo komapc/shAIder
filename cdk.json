@@ -1,5 +1,4 @@
 {
-  "app": "npx tsx amplify/backend.ts",
   "context": {
     "@aws-cdk/core:bootstrapQualifier": "shaid"
   }

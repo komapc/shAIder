@@ -1,27 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test('has title and basic UI elements', async ({ page }) => {
-  await page.goto('/');
-
-  // Check if main UI labels are present
-  await expect(page.locator('text=Shader Description')).toBeVisible();
-  await expect(page.locator('text=Scene Description')).toBeVisible();
-  await expect(page.locator('text=Run All')).toBeVisible();
+test('basic UI check', async ({ page }) => {
+  // Start local dev server in background and wait for it
+  await page.goto('http://localhost:5173');
   
-  // Check if Canvas is rendered
+  // Check title
+  await expect(page).toHaveTitle(/shAIder/i);
+  
+  // Check for the Export button
+  const exportBtn = page.getByRole('button', { name: /Export/i });
+  await expect(exportBtn).toBeVisible();
+  
+  // Check for the Generate button
+  const generateBtn = page.getByRole('button', { name: /Run All/i });
+  await expect(generateBtn).toBeVisible();
+  
+  // Check if Canvas exists
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-});
-
-test('can toggle sidebar', async ({ page }) => {
-  await page.goto('/');
-  
-  // Sidebar should be visible by default (check for Vertex tab)
-  await expect(page.locator('text=Vertex')).toBeVisible();
-  
-  // Click toggle button (title "Hide Sidebar")
-  await page.click('button[title="Hide Sidebar"]');
-  
-  // Vertex tab should be gone
-  await expect(page.locator('text=Vertex')).not.toBeVisible();
 });

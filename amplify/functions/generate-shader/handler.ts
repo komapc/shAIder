@@ -64,7 +64,7 @@ export const handler = async (event: any) => {
     const libraryContext = `
       LIBRARY MATERIALS: 'Iridescent Metal', 'Molten Lava', 'Frosted Glass', 'Digital Hologram', 'Voronoi Cells'.
       AVAILABLE GEOMETRIES: 'sphere', 'box', 'plane', 'torus', 'knot', 'cylinder', 'pyramid', 'floor', 'table', 'chair'.
-      AVAILABLE CC0 TEXTURES (use these URLs for 'texture' type uniforms):
+      AVAILABLE CC0 TEXTURES (use these exact URLs for 'texture' type uniforms):
       - wood: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_wooden_planks/dark_wooden_planks_diff_2k.jpg
       - marble: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/white_marble/white_marble_diff_2k.jpg
       - iron: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/scratched_iron/scratched_iron_diff_2k.jpg
@@ -73,8 +73,25 @@ export const handler = async (event: any) => {
     let systemPrompt = `
       You are an expert Three.js and GLSL developer. Generate GLSL and 3D scene JSON.
       ${libraryContext}
-      OUTPUT FORMAT: JSON with { vertexShader, fragmentShader, uniforms, sceneObjects }.
-      RULES: No #version, use precision highp float, declare uniforms in BOTH shaders if used.
+      
+      OUTPUT FORMAT: STRICT JSON matching this schema:
+      {
+        "vertexShader": "string",
+        "fragmentShader": "string",
+        "uniforms": [
+          { "name": "string", "type": "float" | "color" | "texture", "value": any, "min": number, "max": number }
+        ],
+        "sceneObjects": [
+          { "id": "string", "objectType": "string", "position": [x,y,z], "scale": [x,y,z], "rotation": [x,y,z] }
+        ]
+      }
+      
+      RULES:
+      1. No #version in shaders.
+      2. Use precision highp float.
+      3. Declare uniforms in BOTH shaders if they are used in both.
+      4. Use the provided CC0 Texture URLs for any 'texture' type uniforms.
+      5. Always return 'uniforms' and 'sceneObjects' as ARRAYS.
     `;
 
     if (isRefining || lastError) {
@@ -107,14 +124,42 @@ export const handler = async (event: any) => {
     }
 
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("AI did not return valid JSON");
+    if (!jsonMatch) {
+        console.log("Raw AI Content (failed JSON match):", rawContent);
+        throw new Error("AI did not return valid JSON");
+    }
     
-    // Aggressive clean
+    // Aggressive clean: handle cases where AI might use backticks for multiline strings
     let jsonString = jsonMatch[0].trim();
-    jsonString = jsonString.replace(/:\s*`([\s\S]*?)`/g, (m, c) => `": "${c.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
-    const shaderData = JSON.parse(jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
+    jsonString = jsonString.replace(/:\s*`([\s\S]*?)`/g, (m, c) => `: "${c.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
+    
+    try {
+        const shaderData = JSON.parse(jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
+        
+        // Normalization Step: Ensure uniforms and sceneObjects are arrays
+        if (shaderData.uniforms && !Array.isArray(shaderData.uniforms)) {
+            shaderData.uniforms = Object.entries(shaderData.uniforms).map(([name, config]: [string, any]) => ({
+                name,
+                type: config.type === 't' ? 'texture' : config.type,
+                value: config.value,
+                min: config.min,
+                max: config.max
+            }));
+        }
+        
+        if (shaderData.sceneObjects && !Array.isArray(shaderData.sceneObjects)) {
+            shaderData.sceneObjects = Object.entries(shaderData.sceneObjects).map(([id, config]: [string, any]) => ({
+                id,
+                ...config
+            }));
+        }
 
-    return JSON.stringify(shaderData); // Returns raw string for the mutation
+        return JSON.stringify(shaderData);
+    } catch (parseErr: any) {
+        console.log("Raw AI Content (failed parse):", rawContent);
+        console.log("Cleaned JSON String:", jsonString);
+        throw new Error(`JSON Parse Error: ${parseErr.message}`);
+    }
   } catch (error: any) {
     throw new Error(error.message);
   }
