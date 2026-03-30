@@ -5,6 +5,7 @@ import Scene from './Scene';
 import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
+import FixOverlay from './components/FixOverlay';
 import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw, Download } from 'lucide-react';
 
 // Amplify Integration
@@ -147,48 +148,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden selection:bg-blue-500/30">
       
-      {/* Enhanced Error Overlay */}
-      {(lastError || !isCompiled) && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-2xl px-4 animate-in fade-in zoom-in duration-300">
-            <div className="bg-[#1a0a0a]/95 backdrop-blur-xl border border-red-500/30 rounded-2xl shadow-2xl overflow-hidden shadow-red-950/20">
-                <div className="bg-red-500/10 px-6 py-4 flex items-center justify-between border-b border-red-500/20">
-                    <div className="flex items-center gap-3">
-                        <XCircle className="text-red-500" size={20} />
-                        <h2 className="text-sm font-bold uppercase tracking-widest text-red-200">
-                            {!isCompiled ? "GLSL Compilation Error" : "LLM Request Error"}
-                        </h2>
-                    </div>
-                    <button 
-                        onClick={() => setLastError(null)}
-                        className="text-red-500/50 hover:text-red-400 transition-colors"
-                    >
-                        <Trash2 size={16} />
-                    </button>
-                </div>
-                <div className="p-6">
-                    <p className="text-xs text-red-200/70 font-mono leading-relaxed bg-black/40 p-4 rounded-lg border border-red-500/10 mb-6 max-h-48 overflow-y-auto">
-                        {errorDetails || lastError || "Three.js failed to compile the shader. Check the editor for syntax errors."}
-                    </p>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => handleGenerate(true)}
-                            disabled={isLoading}
-                            className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-[11px] font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
-                        >
-                            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-                            FIX WITH AI (REFINE)
-                        </button>
-                        <button 
-                            onClick={() => setLastError(null)}
-                            className="px-6 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold rounded-xl transition-colors border border-white/10"
-                        >
-                            DISMISS
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+      <FixOverlay isLoading={isLoading} onFix={() => handleGenerate(true)} />
 
       {/* Top Header/Prompt Area */}
       <div 
