@@ -1,6 +1,6 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { DefaultStackSynthesizer, Stack } from 'aws-cdk-lib';
+import { DefaultStackSynthesizer } from 'aws-cdk-lib';
 import { data, generateShader } from './data/resource';
 
 const backend = defineBackend({
@@ -8,18 +8,17 @@ const backend = defineBackend({
   generateShader,
 });
 
-// Force the use of our custom bootstrapped qualifier 'shaid' to bypass broken account defaults
+// Idiomatic way to apply custom bootstrap qualifier to avoid AccessDenied on default account
 const synthesizer = new DefaultStackSynthesizer({
   qualifier: 'shaid',
 });
 
-// Apply synthesizer to the main stacks
-const dataStack = Stack.of(backend.data.resources.graphqlApi);
-const functionStack = Stack.of(backend.generateShader.resources.lambda);
+// Get the actual stacks and set the synthesizer before any synthesis-time operations happen
+backend.data.resources.cfnResources.cfnGraphqlApi.stack.templateOptions.description = "shAIder Data Stack";
+(backend.data.resources.cfnResources.cfnGraphqlApi.stack as any).synthesizer = synthesizer;
 
-// Override synthesizer at the stack level
-(dataStack as any).synthesizer = synthesizer;
-(functionStack as any).synthesizer = synthesizer;
+backend.generateShader.resources.lambda.stack.templateOptions.description = "shAIder Function Stack";
+(backend.generateShader.resources.lambda.stack as any).synthesizer = synthesizer;
 
 // Grant the function permission to call Bedrock
 backend.generateShader.resources.lambda.addToRolePolicy(
