@@ -23,6 +23,7 @@ const schema = a.schema({
       currentUniforms: a.json(),
       currentSceneObjects: a.json(),
       lastError: a.string(),
+      activeEditorTab: a.string(),
     })
     .returns(a.string())
     .handler(a.handler.function(generateShader))

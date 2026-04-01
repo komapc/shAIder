@@ -128,6 +128,7 @@ exports.handler = async (event) => {
       - DO NOT use backticks (\`) for multi-line strings.
       - Escape newlines as \\n.
       - The response must be a SINGLE valid JSON object.
+      - Return ONLY the JSON object. No markdown code blocks, no preamble.
 
       TEXTURE SUPPORT:
       - If user provides a URL for a texture, create a uniform with type: 'texture' and value: 'the_url'.
@@ -137,9 +138,11 @@ exports.handler = async (event) => {
       CRITICAL GLSL RULES:
       - DO NOT include "#version" directives.
       - DO NOT use "layout (location = X)" syntax.
-      - In the Fragment Shader, always declare "precision highp float;".
+      - ALWAYS include "precision highp float;" at the top of BOTH the Vertex and Fragment shaders.
+      - THREE.JS BUILT-INS (DO NOT DECLARE THESE): position (vec3), normal (vec3), uv (vec2), projectionMatrix (mat4), modelViewMatrix (mat4), cameraPosition (vec3).
       - Uniforms (like "time", "resolution", or custom ones) MUST be declared in BOTH the Vertex and Fragment shaders if they are used in both.
       - Ensure "time" (float) and "resolution" (vec2) uniforms are declared if used.
+      - LIGHTING: Implement lighting manually (Phong, Lambert, or custom) using 'cameraPosition' and normals if needed.
     `;
 
     if (isRefining || lastError) {

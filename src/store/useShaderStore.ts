@@ -48,31 +48,29 @@ interface ShaderState {
   setHeaderHeight: (height: number) => void;
   setActiveEditorTab: (tab: 'vertex' | 'fragment' | 'scene') => void;
   setObjectType: (type: string) => void;
+  resetToDefault: () => void;
 }
 
-export const useShaderStore = create<ShaderState>((set) => ({
-  prompt: 'Apply a pulsing, iridescent metallic material with organic, flowing wave patterns that react to time specifically to the cube object.',
-  sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. Bright, soft ambient global illumination with a main point light (sun) high above and to the right. The camera is positioned at a distance, providing a cinematic wide-angle view of the entire scene.',
+const initialState = {
+  prompt: 'A highly reflective iridescent metal material that shifts through the rainbow spectrum as the camera moves.',
+  sceneDescription: 'A dark minimalist room with a single glowing sphere in the center. Cinematic lighting with deep shadows and high contrast.',
   vertexShader: `
     varying vec2 vUv;
     uniform float time;
     
     void main() {
       vUv = uv;
-      
-      // Example: Use time to displace vertices (waving effect)
       vec3 pos = position;
-      pos.z += sin(pos.x * 5.0 + time) * 0.1;
-      pos.y += cos(pos.y * 5.0 + time) * 0.1;
-      
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
   fragmentShader: `
+    precision highp float;
     varying vec2 vUv;
     uniform float time;
     void main() {
-      gl_FragColor = vec4(vUv, sin(time) * 0.5 + 0.5, 1.0);
+      vec3 color = 0.5 + 0.5 * cos(time + vUv.xyx + vec3(0, 2, 4));
+      gl_FragColor = vec4(color, 1.0);
     }
   `,
   uniforms: [
@@ -94,7 +92,11 @@ export const useShaderStore = create<ShaderState>((set) => ({
   isSidebarVisible: true,
   headerHeight: 220,
   isCompiled: true,
-  activeEditorTab: 'fragment',
+  activeEditorTab: 'fragment' as const,
+};
+
+export const useShaderStore = create<ShaderState>((set) => ({
+  ...initialState,
 
   setPrompt: (prompt) => set({ prompt }),
   setSceneDescription: (sceneDescription) => set({ sceneDescription }),
@@ -118,4 +120,5 @@ export const useShaderStore = create<ShaderState>((set) => ({
       obj.id === 'main-obj' ? { ...obj, objectType } : obj
     )
   })),
+  resetToDefault: () => set(initialState),
 }));

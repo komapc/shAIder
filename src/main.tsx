@@ -13,7 +13,12 @@ declare global {
 const originalError = console.error;
 console.error = (...args) => {
   const message = args.join(' ');
-  if (message.includes('THREE.WebGLProgram: shader error:')) {
+  const isShaderError = 
+    message.includes('THREE.WebGLProgram') || 
+    message.includes('shader error') || 
+    message.includes('Shader Error');
+
+  if (isShaderError) {
     if (window.__GLSL_ERROR_CALLBACK__) {
       window.__GLSL_ERROR_CALLBACK__(message);
     }
@@ -23,9 +28,10 @@ console.error = (...args) => {
 
 // Add general error listener as a backup
 window.addEventListener('error', (event) => {
-  if (event.message && event.message.includes('shader error')) {
+  const message = event.message || "";
+  if (message.includes('shader error') || message.includes('Shader Error')) {
     if (window.__GLSL_ERROR_CALLBACK__) {
-      window.__GLSL_ERROR_CALLBACK__(event.message);
+      window.__GLSL_ERROR_CALLBACK__(message);
     }
   }
 });

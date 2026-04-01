@@ -71,10 +71,11 @@ export const handler = async (event: any) => {
     `;
 
     let systemPrompt = `
-      You are an expert Three.js and GLSL developer. Generate GLSL and 3D scene JSON.
+      You are an expert Three.js and GLSL developer. Your goal is to generate high-quality, efficient GLSL shaders and a matching 3D scene configuration in JSON format.
+      
       ${libraryContext}
       
-      OUTPUT FORMAT: STRICT JSON matching this schema:
+      STRICT OUTPUT FORMAT (JSON ONLY):
       {
         "vertexShader": "string",
         "fragmentShader": "string",
@@ -86,16 +87,43 @@ export const handler = async (event: any) => {
         ]
       }
       
-      RULES:
-      1. No #version in shaders.
-      2. Use precision highp float.
-      3. Declare uniforms in BOTH shaders if they are used in both.
-      4. Use the provided CC0 Texture URLs for any 'texture' type uniforms.
-      5. Always return 'uniforms' and 'sceneObjects' as ARRAYS.
+      CORE RULES:
+      1. NO #version directive.
+      2. ALWAYS include 'precision highp float;' at the top of BOTH shaders.
+      3. THREE.JS BUILT-INS (DO NOT DECLARE THESE, THEY ARE PREPENDED BY THREE.JS):
+         - Attributes: position (vec3), normal (vec3), uv (vec2)
+         - Matrices: projectionMatrix (mat4), modelViewMatrix (mat4), viewMatrix (mat4), modelMatrix (mat4), normalMatrix (mat3)
+         - Camera: cameraPosition (vec3)
+         - Varyings: vUv (if you declare it in vertex and pass to fragment)
+      4. UNIFORMS:
+         - Common uniforms like 'time' (float) should be included in the 'uniforms' array.
+         - If a custom uniform is used in both shaders, it MUST be declared in both.
+         - 'resolution' should be a vec2 representing the viewport size.
+      5. TEXTURES: Only use the provided CC0 Texture URLs. Type must be 'texture'. Declared as 'uniform sampler2D name;'.
+      6. ARRAYS: 'uniforms' and 'sceneObjects' MUST be arrays.
+      7. JSON: Return ONLY the JSON object. No markdown code blocks, no preamble.
+      8. COORDINATES: Three.js uses a right-handed coordinate system. Y is up.
+      9. LIGHTING: Since this is a ShaderMaterial, you must implement lighting manually in the fragment shader if desired (using normals, cameraPosition, etc.).
     `;
 
-    if (isRefining || lastError) {
-      systemPrompt += `\nCONTEXT: Shaders, Uniforms, SceneObjects provided. Fix: ${lastError}`;
+    if (isRefining || (lastError && lastError.trim() !== "")) {
+      systemPrompt += `
+      ### TASK: REFINEMENT / BUG FIX
+      You are modifying an existing scene.
+      
+      CURRENT STATE:
+      - Vertex Shader: \n${currentVertexShader}\n
+      - Fragment Shader: \n${currentFragmentShader}\n
+      - Uniforms: ${currentUniforms}
+      - Scene Objects: ${currentSceneObjects}
+      
+      ${lastError ? `FAILED WITH ERROR: ${lastError}\nINSTRUCTION: Analyze this error and fix the code. If it is a redefinition error, remove the extra declaration.` : "INSTRUCTION: Update the scene based on the user's new request below."}
+      `;
+    } else {
+      systemPrompt += `
+      ### TASK: NEW GENERATION
+      Create a complete scene from scratch based on the user request. Ensure shaders are visually interesting and use the provided libraries.
+      `;
     }
 
     const userMessage = `SHADER: ${prompt}\nSCENE: ${sceneDescription}`;

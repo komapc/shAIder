@@ -89,11 +89,12 @@ const App: React.FC = () => {
     addLog("Exported scene to HTML.");
   };
 
-  const handleGenerate = async (isRefining = false) => {
+  const handleGenerate = async (isRefining = false, retryCount = 0) => {
     if (!prompt && !sceneDescription && !lastError) return;
     
     setLoading(true);
-    addLog(isRefining ? "Refining scene..." : lastError ? `Attempting fix...` : "Generating new scene...");
+    const logPrefix = retryCount > 0 ? `[Retry ${retryCount}/5] ` : "";
+    addLog(`${logPrefix}${isRefining ? "Refining scene..." : lastError ? "Attempting fix..." : "Generating new scene..."}`);
 
     try {
       let data;
@@ -108,7 +109,8 @@ const App: React.FC = () => {
             currentFragmentShader: fragmentShader,
             currentUniforms: JSON.stringify(uniforms),
             currentSceneObjects: JSON.stringify(sceneObjects),
-            lastError: lastError || ""
+            lastError: lastError || "",
+            activeEditorTab: activeEditorTab
           }) as any;
 
           if (response.errors) throw new Error(response.errors[0].message);
@@ -134,13 +136,28 @@ const App: React.FC = () => {
       }
 
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
-      addLog("Compilation successful.");
+      addLog(`${logPrefix}Generation received. Waiting for compilation...`);
+      
+      // Wait for a short moment to allow Scene.tsx to catch compilation errors
+      setTimeout(() => {
+        const currentError = useShaderStore.getState().lastError;
+        if (currentError && retryCount < 5) {
+          addLog(`${logPrefix}Compilation failed. Retrying auto-fix...`);
+          handleGenerate(true, retryCount + 1);
+        } else if (!currentError) {
+          addLog(`${logPrefix}Compilation successful.`);
+          setLoading(false);
+        } else {
+          addLog(`${logPrefix}Max retries reached. Manual intervention required.`);
+          setLoading(false);
+        }
+      }, 1500);
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(err);
       setLastError("AI Generation Failed", message);
       addLog(`Error: ${message}`);
-    } finally {
       setLoading(false);
     }
   };
@@ -229,7 +246,10 @@ const App: React.FC = () => {
               Run All
             </button>
             <div className="flex gap-2 justify-center">
-                <button className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+                <button 
+                  onClick={resetToDefault}
+                  className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium"
+                >
                    <RotateCcw size={14} />
                    Reset
                 </button>

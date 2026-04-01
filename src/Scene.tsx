@@ -192,9 +192,15 @@ const Scene: React.FC = () => {
     window.__GLSL_ERROR_CALLBACK__ = (message: string) => {
       setTimeout(() => {
         setIsCompiled(false);
-        addLog("GLSL Error detected!");
-        const errorLines = message.split('\n').filter(l => l.includes('ERROR:'));
-        setLastError(errorLines.length > 0 ? errorLines.join('\n') : message);
+        const isVertex = message.includes('VERTEX');
+        addLog(`GLSL ${isVertex ? 'Vertex' : 'Fragment'} Error detected!`);
+        
+        // Extract the actual error part
+        const errorMatch = message.match(/ERROR: [\s\S]*?(?=\n\n|$)/);
+        const cleanMessage = errorMatch ? errorMatch[0] : message.split('\n').slice(0, 10).join('\n');
+        
+        setLastError(cleanMessage);
+        console.log("Captured Shader Error:", cleanMessage);
       }, 0);
     };
     
