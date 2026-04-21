@@ -46,7 +46,8 @@ const App: React.FC = () => {
     clearLogs,
     toggleSidebar,
     setHeaderHeight,
-    setActiveEditorTab
+    setActiveEditorTab,
+    resetToDefault
   } = useShaderStore();
 
   const [isResizing, setIsResizing] = useState(false);
@@ -355,7 +356,9 @@ const App: React.FC = () => {
         {/* Right Side: 3D Scene */}
         <div className="flex-1 relative bg-[#050505]">
           <Canvas shadows dpr={[1, 2]}>
-            <Scene />
+            <React.Suspense fallback={null}>
+              <Scene />
+            </React.Suspense>
           </Canvas>
           
           {/* Status Indicators */}
