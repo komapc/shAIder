@@ -46,7 +46,8 @@ const App: React.FC = () => {
     clearLogs,
     toggleSidebar,
     setHeaderHeight,
-    setActiveEditorTab
+    setActiveEditorTab,
+    resetToDefault
   } = useShaderStore();
 
   const [isResizing, setIsResizing] = useState(false);
@@ -89,11 +90,12 @@ const App: React.FC = () => {
     addLog("Exported scene to HTML.");
   };
 
-  const handleGenerate = async (isRefining = false) => {
+  const handleGenerate = async (isRefining = false, retryCount = 0) => {
     if (!prompt && !sceneDescription && !lastError) return;
     
     setLoading(true);
-    addLog(isRefining ? "Refining scene..." : lastError ? `Attempting fix...` : "Generating new scene...");
+    const logPrefix = retryCount > 0 ? `[Retry ${retryCount}/5] ` : "";
+    addLog(`${logPrefix}${isRefining ? "Refining scene..." : lastError ? "Attempting fix..." : "Generating new scene..."}`);
 
     try {
       let data;
@@ -108,7 +110,8 @@ const App: React.FC = () => {
             currentFragmentShader: fragmentShader,
             currentUniforms: JSON.stringify(uniforms),
             currentSceneObjects: JSON.stringify(sceneObjects),
-            lastError: lastError || ""
+            lastError: lastError || "",
+            activeEditorTab: activeEditorTab
           }) as any;
 
           if (response.errors) throw new Error(response.errors[0].message);
@@ -118,8 +121,8 @@ const App: React.FC = () => {
           const response = await fetch('/api/generate-shader', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              prompt, 
+            body: JSON.stringify({
+              prompt,
               sceneDescription,
               isRefining,
               currentVertexShader: vertexShader,
@@ -129,18 +132,45 @@ const App: React.FC = () => {
               lastError: lastError
             })
           });
-          data = await response.json();
+          const text = await response.text();
+          if (!text.trim()) {
+            throw new Error(
+              'API returned an empty response. Make sure the local server is running:\n  node api/local-server.js'
+            );
+          }
+          try {
+            data = JSON.parse(text);
+          } catch {
+            throw new Error(`API returned invalid JSON. The server may be unreachable or the AI response was malformed.\n${text.slice(0, 200)}`);
+          }
           if (!response.ok) throw new Error(data.message || 'API request failed');
       }
 
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
-      addLog("Compilation successful.");
+      addLog(`${logPrefix}Generation received. Waiting for compilation...`);
+
+      // Wait two render frames for Three.js to compile and invoke onShaderError,
+      // then a short tick for React to flush the resulting state updates.
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+      const currentError = useShaderStore.getState().lastError;
+      if (currentError && retryCount < 5) {
+        addLog(`${logPrefix}Compilation failed. Retrying auto-fix...`);
+        handleGenerate(true, retryCount + 1);
+      } else if (!currentError) {
+        addLog(`${logPrefix}Compilation successful.`);
+        setLoading(false);
+      } else {
+        addLog(`${logPrefix}Max retries reached. Manual intervention required.`);
+        setLoading(false);
+      }
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(err);
       setLastError("AI Generation Failed", message);
       addLog(`Error: ${message}`);
-    } finally {
       setLoading(false);
     }
   };
@@ -229,7 +259,10 @@ const App: React.FC = () => {
               Run All
             </button>
             <div className="flex gap-2 justify-center">
-                <button className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium">
+                <button 
+                  onClick={resetToDefault}
+                  className="flex items-center justify-center gap-1.5 p-2 text-gray-500 hover:text-white transition-colors text-xs font-medium"
+                >
                    <RotateCcw size={14} />
                    Reset
                 </button>
@@ -335,7 +368,9 @@ const App: React.FC = () => {
         {/* Right Side: 3D Scene */}
         <div className="flex-1 relative bg-[#050505]">
           <Canvas shadows dpr={[1, 2]}>
-            <Scene />
+            <React.Suspense fallback={null}>
+              <Scene />
+            </React.Suspense>
           </Canvas>
           
           {/* Status Indicators */}

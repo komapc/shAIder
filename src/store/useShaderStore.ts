@@ -48,44 +48,69 @@ interface ShaderState {
   setHeaderHeight: (height: number) => void;
   setActiveEditorTab: (tab: 'vertex' | 'fragment' | 'scene') => void;
   setObjectType: (type: string) => void;
+  resetToDefault: () => void;
 }
 
-export const useShaderStore = create<ShaderState>((set) => ({
-  prompt: 'Apply a pulsing, iridescent metallic material with organic, flowing wave patterns that react to time specifically to the cube object.',
-  sceneDescription: 'A mahogany wooden table with a reflective metallic cube sitting in the center. Bright, soft ambient global illumination with a main point light (sun) high above and to the right. The camera is positioned at a distance, providing a cinematic wide-angle view of the entire scene.',
-  vertexShader: `
-    varying vec2 vUv;
-    uniform float time;
-    
-    void main() {
-      vUv = uv;
-      
-      // Example: Use time to displace vertices (waving effect)
-      vec3 pos = position;
-      pos.z += sin(pos.x * 5.0 + time) * 0.1;
-      pos.y += cos(pos.y * 5.0 + time) * 0.1;
-      
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-    }
-  `,
-  fragmentShader: `
-    varying vec2 vUv;
-    uniform float time;
-    void main() {
-      gl_FragColor = vec4(vUv, sin(time) * 0.5 + 0.5, 1.0);
-    }
-  `,
+const initialState = {
+  prompt: 'A dark cinematic material with a neon blue rim glow and subtle pulsing emissive light along the edges.',
+  sceneDescription: 'A single glowing cube centered in a dark void, slightly rotated to show depth. Add a floor plane beneath it.',
+  vertexShader: `precision highp float;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPos;
+uniform float time;
+
+void main() {
+  vUv = uv;
+  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+  vNormal = normalize(normalMatrix * normal);
+  vViewPos = -mvPos.xyz;
+  gl_Position = projectionMatrix * mvPos;
+}`,
+  fragmentShader: `precision highp float;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPos;
+uniform float time;
+uniform float glowIntensity;
+uniform vec3 glowColor;
+
+void main() {
+  vec3 n = normalize(vNormal);
+  vec3 viewDir = normalize(vViewPos);
+
+  float fresnel = 1.0 - max(dot(n, viewDir), 0.0);
+  float rim = pow(fresnel, 2.5);
+  float pulse = 0.75 + 0.25 * sin(time * 1.5);
+
+  vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+  float diffuse = max(dot(n, lightDir), 0.0) * 0.12;
+
+  vec3 base = vec3(0.02, 0.02, 0.05) * (0.08 + diffuse);
+  vec3 emissive = glowColor * (rim * glowIntensity + 0.08) * pulse;
+
+  gl_FragColor = vec4(base + emissive, 1.0);
+}`,
   uniforms: [
-    { name: 'time', type: 'float', value: 0, min: 0, max: 10 },
+    { name: 'time',          type: 'float' as const, value: 0,          min: 0, max: 10 },
+    { name: 'glowIntensity', type: 'float' as const, value: 2.5,        min: 0, max: 5  },
+    { name: 'glowColor',     type: 'color' as const, value: '#2266ff'                   },
   ],
   sceneObjects: [
     {
-      id: 'main-obj',
-      objectType: 'sphere',
-      position: [0, 0, 0],
-      scale: [1, 1, 1],
-      rotation: [0, 0, 0],
-    }
+      id: 'cube-01',
+      objectType: 'box',
+      position: [0, 0.5, 0] as [number, number, number],
+      scale:    [1, 1, 1]   as [number, number, number],
+      rotation: [0, 0.4, 0] as [number, number, number],
+    },
+    {
+      id: 'floor-01',
+      objectType: 'floor',
+      position: [0, 0, 0] as [number, number, number],
+      scale:    [1, 1, 1] as [number, number, number],
+      rotation: [0, 0, 0] as [number, number, number],
+    },
   ],
   isLoading: false,
   logs: [],
@@ -94,7 +119,11 @@ export const useShaderStore = create<ShaderState>((set) => ({
   isSidebarVisible: true,
   headerHeight: 220,
   isCompiled: true,
-  activeEditorTab: 'fragment',
+  activeEditorTab: 'fragment' as const,
+};
+
+export const useShaderStore = create<ShaderState>((set) => ({
+  ...initialState,
 
   setPrompt: (prompt) => set({ prompt }),
   setSceneDescription: (sceneDescription) => set({ sceneDescription }),
@@ -118,4 +147,5 @@ export const useShaderStore = create<ShaderState>((set) => ({
       obj.id === 'main-obj' ? { ...obj, objectType } : obj
     )
   })),
+  resetToDefault: () => set(initialState),
 }));

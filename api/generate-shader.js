@@ -9,11 +9,12 @@ async function callOpenRouter(systemPrompt, userMessage) {
     throw new Error("OpenRouter API Key is missing. Please update it in AWS Secrets Manager.");
   }
 
-  // Priority: Stable Paid (Haiku) -> Free Models
+  // Priority: best JSON reliability first, free tiers as last resort
   const models = [
-    "anthropic/claude-3-haiku",      // Most stable, very cheap
-    "google/gemma-2-9b-it:free",
-    "meta-llama/llama-3-8b-instruct:free"
+    "anthropic/claude-3-5-haiku",          // Best JSON adherence, cheap
+    "anthropic/claude-3-haiku",            // Fallback paid
+    "google/gemma-2-27b-it:free",          // Larger free model, better JSON
+    "meta-llama/llama-3.1-8b-instruct:free"
   ];
 
   let lastError = null;
@@ -98,48 +99,46 @@ exports.handler = async (event) => {
     }
 
     const libraryContext = `
-      LIBRARY MATERIALS:
-      - 'Iridescent Metal': Pulsing, flowing wave patterns.
-      - 'Molten Lava': Glowing orange-red noise-based magma.
-      - 'Frosted Glass': Semi-transparent blurred refraction.
-      - 'Digital Hologram': Sci-fi blue glowing flickers.
-      - 'Voronoi Cells': Shifting geometric organic patterns.
-
       AVAILABLE GEOMETRIES:
-      - Primitives: 'sphere', 'box' (or 'cube'), 'plane', 'torus', 'knot', 'cylinder', 'pyramid', 'floor'.
-      - Complex (Composite): 'table', 'chair'.
+      - Primitives: 'sphere', 'box' (cube), 'plane', 'torus', 'knot', 'cylinder', 'pyramid'.
+      - Special: 'floor' (large flat ground plane, rotation already applied — do NOT rotate it yourself).
+      - Composite: 'table', 'chair'.
+      NOTE: There is no 'room' geometry. For an enclosed dark scene, use a 'floor' object plus dark ambient in the shader.
     `;
 
     let systemPrompt = `
-      You are an expert Three.js and GLSL developer.
-      Your task is to generate both a GLSL shader and a 3D scene configuration based on user descriptions.
+      You are a concise Three.js and GLSL expert. Generate a shader and scene config from user descriptions.
+      Be brief — keep shaders under 60 lines total. Verbose output causes JSON truncation.
 
       ${libraryContext}
 
-      OUTPUT FORMAT:
-      You MUST return a strict JSON object with EXACTLY these four keys:
-      1. "vertexShader": A GLSL vertex shader string.
-      2. "fragmentShader": A GLSL fragment shader string.
-      3. "uniforms": An array of objects: { name, type, value, min, max }.
-      4. "sceneObjects": An array of objects: { id, objectType, position, scale, rotation, color }.
+      OUTPUT FORMAT — return ONLY a single JSON object with these four keys, nothing else:
+      1. "vertexShader": GLSL vertex shader string (newlines escaped as \\n).
+      2. "fragmentShader": GLSL fragment shader string (newlines escaped as \\n).
+      3. "uniforms": [{ name, type ("float"|"color"|"texture"), value, min?, max? }]
+      4. "sceneObjects": [{ id, objectType, position:[x,y,z], scale:[x,y,z], rotation:[x,y,z] }]
 
-      CRITICAL JSON RULES:
-      - Use standard double quotes (") for all strings.
-      - DO NOT use backticks (\`) for multi-line strings.
-      - Escape newlines as \\n.
-      - The response must be a SINGLE valid JSON object.
+      JSON RULES:
+      - Double quotes only. No backticks. Escape newlines as \\n. No markdown fences. No preamble.
 
       TEXTURE SUPPORT:
-      - If user provides a URL for a texture, create a uniform with type: 'texture' and value: 'the_url'.
-      - In the GLSL code, declare it as 'uniform sampler2D name;'.
-      - Use texture2D(name, vUv) to sample it.
+      - For a texture URL, add a uniform with type:"texture". Declare as 'uniform sampler2D name;' in GLSL.
+      - Sample with texture2D(name, vUv).
 
-      CRITICAL GLSL RULES:
-      - DO NOT include "#version" directives.
-      - DO NOT use "layout (location = X)" syntax.
-      - In the Fragment Shader, always declare "precision highp float;".
-      - Uniforms (like "time", "resolution", or custom ones) MUST be declared in BOTH the Vertex and Fragment shaders if they are used in both.
-      - Ensure "time" (float) and "resolution" (vec2) uniforms are declared if used.
+      GLSL RULES:
+      - No "#version" directives. No "layout(location=X)".
+      - Start BOTH shaders with "precision highp float;\\n".
+      - THREE.JS BUILT-IN ATTRIBUTES (never redeclare): position, normal, uv.
+      - THREE.JS BUILT-IN UNIFORMS (never redeclare): projectionMatrix, modelViewMatrix, modelMatrix, viewMatrix, normalMatrix, cameraPosition.
+      - Declare any custom uniform in EVERY shader that uses it.
+      - Always include "time" (float) uniform if animating.
+
+      LIGHTING GUIDE (implement in fragment shader):
+      - normalMatrix * normal  →  view-space normal (use for lighting/fresnel).
+      - (modelMatrix * vec4(position,1.0)).xyz  →  world-space position (pass from vertex).
+      - Fresnel rim: pow(1.0 - max(dot(n, viewDir), 0.0), 2.5) for glow edges.
+      - For "cinematic" / "dark" scenes: use low ambient (0.03–0.08), strong rim glow, and a pulsing emissive.
+      - For "glowing" objects: combine rim fresnel + emissive + subtle diffuse from a fixed light direction.
     `;
 
     if (isRefining || lastError) {
@@ -167,7 +166,7 @@ exports.handler = async (event) => {
         console.log("[API] Attempting Bedrock...");
         const payload = {
           anthropic_version: "bedrock-2023-05-31",
-          max_tokens: 4000,
+          max_tokens: 6000,
           system: systemPrompt,
           messages: [{ role: "user", content: userMessage }],
         };
