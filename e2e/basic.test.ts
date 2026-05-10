@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('basic UI check', async ({ page }) => {
-  // Start local dev server in background and wait for it
-  await page.goto('http://localhost:5173');
+  await page.goto('/');
   
   // Check title
   await expect(page).toHaveTitle(/shAIder/i);

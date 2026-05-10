@@ -5,65 +5,18 @@ import * as THREE from 'three';
 import { useShaderStore } from './store/useShaderStore';
 import type { SceneObject, Uniform } from './store/useShaderStore';
 
-// Global hooks for the console.error interceptor
-const originalError = console.error;
-const globalState = {
-  addLog: null as ((m: string) => void) | null,
-  setLastError: null as ((m: string) => void) | null,
-  setIsCompiled: null as ((b: boolean) => void) | null
-};
-
-// Intercept shader compilation errors globally and immediately
-console.error = (...args: unknown[]) => {
-  const message = args.join(' ');
-  if (message.includes('THREE.WebGLProgram: shader error:')) {
-    if (globalState.setIsCompiled) {
-        setTimeout(() => globalState.setIsCompiled?.(false), 0);
-    }
-    if (globalState.addLog) {
-        setTimeout(() => globalState.addLog?.("GLSL Error detected!"), 0);
-    }
-    const errorLines = message.split('\n').filter(l => l.includes('ERROR:'));
-    if (globalState.setLastError) {
-        setTimeout(() => globalState.setLastError?.(errorLines.length > 0 ? errorLines.join('\n') : message), 0);
-    }
-  }
-  originalError.apply(console, args);
-};
-
-const SingleObject: React.FC<{ 
-  obj: SceneObject; 
-  vertexShader: string; 
-  fragmentShader: string; 
+const SingleObject: React.FC<{
+  obj: SceneObject;
+  vertexShader: string;
+  fragmentShader: string;
   uniforms: Record<string, { value: unknown }>;
   isCompiled: boolean;
 }> = ({ obj, vertexShader, fragmentShader, uniforms, isCompiled }) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const { gl } = useThree();
 
   useEffect(() => {
-    try {
-        const testMaterial = new THREE.ShaderMaterial({
-            vertexShader,
-            fragmentShader,
-            uniforms: uniforms
-        });
-        
-        const dummyMesh = new THREE.Mesh(new THREE.BoxGeometry(), testMaterial);
-        const dummyScene = new THREE.Scene();
-        dummyScene.add(dummyMesh);
-        const dummyCamera = new THREE.Camera();
-        
-        // This triggers compilation
-        gl.compile(dummyScene, dummyCamera);
-        
-        if (materialRef.current) {
-            materialRef.current.needsUpdate = true;
-        }
-    } catch (e) {
-        console.error("Manual compilation check failed", e);
-    }
-  }, [vertexShader, fragmentShader, gl, uniforms]);
+    if (materialRef.current) materialRef.current.needsUpdate = true;
+  }, [vertexShader, fragmentShader]);
 
   useFrame((state) => {
     if (materialRef.current && isCompiled && materialRef.current.uniforms.time) {
@@ -182,44 +135,32 @@ const UniformsManager: React.FC<{
 };
 
 const Scene: React.FC = () => {
-  const { 
+  const {
     vertexShader, fragmentShader, uniforms, sceneObjects,
     isCompiled, addLog, setLastError, setIsCompiled
   } = useShaderStore();
-  
-  // Register the global error callback defined in main.tsx
+  const { gl } = useThree();
+
   useEffect(() => {
-    window.__GLSL_ERROR_CALLBACK__ = (message: string) => {
+    const prev = gl.debug.onShaderError;
+    gl.debug.onShaderError = (glCtx, _program, vertShader, fragShader) => {
+      const vertLog = glCtx.getShaderInfoLog(vertShader) || '';
+      const fragLog = glCtx.getShaderInfoLog(fragShader) || '';
+      const combined = [vertLog, fragLog].filter(Boolean).join('\n');
+      const errorLines = combined.split('\n').filter(l => l.includes('ERROR:')).join('\n');
+      const message = errorLines || combined.slice(0, 500);
       setTimeout(() => {
         setIsCompiled(false);
-        const isVertex = message.includes('VERTEX');
-        addLog(`GLSL ${isVertex ? 'Vertex' : 'Fragment'} Error detected!`);
-        
-        // Extract the actual error part
-        const errorMatch = message.match(/ERROR: [\s\S]*?(?=\n\n|$)/);
-        const cleanMessage = errorMatch ? errorMatch[0] : message.split('\n').slice(0, 10).join('\n');
-        
-        setLastError(cleanMessage);
-        console.log("Captured Shader Error:", cleanMessage);
+        addLog('GLSL Compilation Error detected!');
+        setLastError(message || 'Shader compilation failed.');
       }, 0);
     };
-    
-    // Also connect to local globalState for the interceptor defined in this file
-    globalState.addLog = addLog;
-    globalState.setLastError = setLastError;
-    globalState.setIsCompiled = setIsCompiled;
-
-    return () => { 
-      window.__GLSL_ERROR_CALLBACK__ = null;
-      globalState.addLog = null;
-      globalState.setLastError = null;
-      globalState.setIsCompiled = null;
-    };
-  }, [addLog, setLastError, setIsCompiled]);
+    return () => { gl.debug.onShaderError = prev; };
+  }, [gl, addLog, setLastError, setIsCompiled]);
 
   useEffect(() => {
-    if (!isCompiled) setIsCompiled(true);
-  }, [vertexShader, fragmentShader, setIsCompiled, isCompiled]);
+    setIsCompiled(true);
+  }, [vertexShader, fragmentShader, setIsCompiled]);
 
   return (
     <>

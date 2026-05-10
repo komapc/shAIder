@@ -121,8 +121,8 @@ const App: React.FC = () => {
           const response = await fetch('/api/generate-shader', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              prompt, 
+            body: JSON.stringify({
+              prompt,
               sceneDescription,
               isRefining,
               currentVertexShader: vertexShader,
@@ -132,27 +132,39 @@ const App: React.FC = () => {
               lastError: lastError
             })
           });
-          data = await response.json();
+          const text = await response.text();
+          if (!text.trim()) {
+            throw new Error(
+              'API returned an empty response. Make sure the local server is running:\n  node api/local-server.js'
+            );
+          }
+          try {
+            data = JSON.parse(text);
+          } catch {
+            throw new Error(`API returned invalid JSON. The server may be unreachable or the AI response was malformed.\n${text.slice(0, 200)}`);
+          }
           if (!response.ok) throw new Error(data.message || 'API request failed');
       }
 
       setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
       addLog(`${logPrefix}Generation received. Waiting for compilation...`);
-      
-      // Wait for a short moment to allow Scene.tsx to catch compilation errors
-      setTimeout(() => {
-        const currentError = useShaderStore.getState().lastError;
-        if (currentError && retryCount < 5) {
-          addLog(`${logPrefix}Compilation failed. Retrying auto-fix...`);
-          handleGenerate(true, retryCount + 1);
-        } else if (!currentError) {
-          addLog(`${logPrefix}Compilation successful.`);
-          setLoading(false);
-        } else {
-          addLog(`${logPrefix}Max retries reached. Manual intervention required.`);
-          setLoading(false);
-        }
-      }, 1500);
+
+      // Wait two render frames for Three.js to compile and invoke onShaderError,
+      // then a short tick for React to flush the resulting state updates.
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+      const currentError = useShaderStore.getState().lastError;
+      if (currentError && retryCount < 5) {
+        addLog(`${logPrefix}Compilation failed. Retrying auto-fix...`);
+        handleGenerate(true, retryCount + 1);
+      } else if (!currentError) {
+        addLog(`${logPrefix}Compilation successful.`);
+        setLoading(false);
+      } else {
+        addLog(`${logPrefix}Max retries reached. Manual intervention required.`);
+        setLoading(false);
+      }
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
