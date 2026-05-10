@@ -6,7 +6,7 @@ import ShaderEditor from './components/ShaderEditor';
 import ParametersPanel from './components/ParametersPanel';
 import LibraryPanel from './components/LibraryPanel';
 import FixOverlay from './components/FixOverlay';
-import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, XCircle, RefreshCw, Download } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, PanelLeftClose, PanelLeft, GripHorizontal, Code, FileJson, Trash2, ChevronDown, ChevronUp, Download } from 'lucide-react';
 
 // Amplify Integration
 import { Amplify } from 'aws-amplify';
@@ -14,6 +14,7 @@ import { generateClient } from 'aws-amplify/data';
 import { configureAmplify } from './amplify-config';
 import { generateStandaloneHtml } from './utils/exportHtml';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const client = generateClient<any>();
 
 // Initialize Amplify
@@ -30,7 +31,6 @@ const App: React.FC = () => {
     prompt,
     sceneDescription,
     lastError,
-    errorDetails,
     isSidebarVisible,
     headerHeight,
     isCompiled,
@@ -112,6 +112,7 @@ const App: React.FC = () => {
             currentSceneObjects: JSON.stringify(sceneObjects),
             lastError: lastError || "",
             activeEditorTab: activeEditorTab
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           }) as any;
 
           if (response.errors) throw new Error(response.errors[0].message);

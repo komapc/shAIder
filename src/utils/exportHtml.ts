@@ -16,7 +16,7 @@ export const generateStandaloneHtml = (
       acc[u.name] = { value: u.value };
     }
     return acc;
-  }, {} as any);
+  }, {} as Record<string, { value: unknown }>);
 
   const uniformsString = JSON.stringify(uniformsJs, null, 2)
     .replace(/"value": "new THREE\.Color\('(.*?)'\)"/g, '"value": new THREE.Color(\'$1\')')

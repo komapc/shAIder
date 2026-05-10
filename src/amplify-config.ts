@@ -8,6 +8,7 @@ export const configureAmplify = async () => {
   
   if (outputsFiles[path]) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mod = await outputsFiles[path]() as any;
       Amplify.configure(mod.default);
       console.log("Amplify configured successfully from outputs file");

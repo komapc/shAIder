@@ -15,7 +15,7 @@ async function callOpenRouter(systemPrompt: string, userMessage: string) {
     "meta-llama/llama-3-8b-instruct:free"
   ];
 
-  let lastError: any = null;
+  let lastError: Error | null = null;
 
   for (const model of models) {
     try {
@@ -44,6 +44,7 @@ async function callOpenRouter(systemPrompt: string, userMessage: string) {
   throw lastError;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handler = async (event: any) => {
   const region = process.env.AWS_REGION || "eu-central-1";
   const client = new BedrockRuntimeClient({ region });
@@ -162,10 +163,12 @@ export const handler = async (event: any) => {
     jsonString = jsonString.replace(/:\s*`([\s\S]*?)`/g, (m, c) => `: "${c.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
     
     try {
+        // eslint-disable-next-line no-control-regex
         const shaderData = JSON.parse(jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""));
         
         // Normalization Step: Ensure uniforms and sceneObjects are arrays
         if (shaderData.uniforms && !Array.isArray(shaderData.uniforms)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             shaderData.uniforms = Object.entries(shaderData.uniforms).map(([name, config]: [string, any]) => ({
                 name,
                 type: config.type === 't' ? 'texture' : config.type,
@@ -176,6 +179,7 @@ export const handler = async (event: any) => {
         }
         
         if (shaderData.sceneObjects && !Array.isArray(shaderData.sceneObjects)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             shaderData.sceneObjects = Object.entries(shaderData.sceneObjects).map(([id, config]: [string, any]) => ({
                 id,
                 ...config
@@ -183,12 +187,12 @@ export const handler = async (event: any) => {
         }
 
         return JSON.stringify(shaderData);
-    } catch (parseErr: any) {
+    } catch (parseErr: unknown) {
         console.log("Raw AI Content (failed parse):", rawContent);
         console.log("Cleaned JSON String:", jsonString);
-        throw new Error(`JSON Parse Error: ${parseErr.message}`);
+        throw new Error(`JSON Parse Error: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
     }
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : String(error));
   }
 };
