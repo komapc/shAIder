@@ -2,6 +2,8 @@
 
 shAIder is a text-to-shader generator that translates your descriptions into real-time 3D shaders using AWS Bedrock.
 
+![shAIder Interface](public/screenshot.png)
+
 ## Features
 - **Text-to-Shader:** Describe a visual effect and see it come to life in 3D.
 - **Real-time Editors:** Manually tweak the auto-generated Vertex and Fragment shaders.

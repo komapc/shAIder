@@ -106,3 +106,32 @@ exports.handler = async (event) => {
     };
   }
 };
+
+// Support Vercel Serverless Function export format
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = async (req, res) => {
+    // Enable CORS
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+    );
+
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
+
+    try {
+      const event = {
+        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}),
+      };
+      const result = await exports.handler(event);
+      res.status(result.statusCode).json(JSON.parse(result.body));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+}
