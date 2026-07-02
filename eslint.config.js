@@ -6,7 +6,7 @@ import tsParser from '@typescript-eslint/parser'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', '.amplify', 'playwright-report', 'test-results'] },
   {
     files: ['amplify/**/*.ts', 'playwright.config.ts', 'e2e/**/*.ts'],
     languageOptions: {
