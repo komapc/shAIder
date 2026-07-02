@@ -32,17 +32,36 @@ shAIder is a text-to-shader generator that translates your descriptions into rea
    ```
 
 ### Local Development
-To run the development server:
-```bash
-npm run dev
-```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+To run the project locally, you need to start both the frontend development server and the mock backend API server:
 
-### Testing
-To run the unit tests:
-```bash
-npm run test
-```
+1. **Start the local mock API server**:
+   ```bash
+   node api/local-server.js
+   ```
+   *Note: This server runs at `http://localhost:3001` and resolves credentials via AWS Secrets Manager. If AWS credentials are not set up locally, it falls back to OpenRouter.*
+
+2. **Start the frontend development server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:5173](http://localhost:5173) (or the fallback port shown in your terminal) in your browser.
+
+### Testing and Code Quality
+
+- **Run Unit Tests** (Vitest):
+  ```bash
+  npm run test
+  ```
+
+- **Run End-to-End Tests** (Playwright):
+  ```bash
+  npx playwright test
+  ```
+
+- **Run Code Linter** (ESLint):
+  ```bash
+  npm run lint
+  ```
 
 ## Roadmap
 - [x] Initial UI and 3D Scene
