@@ -76,6 +76,30 @@ async function loadSecrets() {
       console.error(`[Secrets] Error fetching secrets:`, error.message);
     }
   }
+
+  // Also fetch the valid Gemini API key if available
+  try {
+    const response = await client.send(
+      new GetSecretValueCommand({
+        SecretId: "openclaw/gemini-api-key",
+      })
+    );
+    if (response.SecretString) {
+      let key = "";
+      try {
+        const parsed = JSON.parse(response.SecretString);
+        key = parsed.api_key || parsed.GEMINI_API_KEY || parsed.key || Object.values(parsed)[0];
+      } catch {
+        key = response.SecretString;
+      }
+      if (key && (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.length < 20)) {
+        process.env.GEMINI_API_KEY = key.trim();
+        console.log(`[Secrets] Loaded valid GEMINI_API_KEY from openclaw/gemini-api-key`);
+      }
+    }
+  } catch (err) {
+    console.warn("[Secrets] Could not load openclaw/gemini-api-key:", err.message);
+  }
 }
 
 module.exports = { loadSecrets };

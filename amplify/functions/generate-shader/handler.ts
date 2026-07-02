@@ -1,5 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { buildPrompts, callOpenRouter, extractShaderJson } from "../../../api/shader-core.js";
+import { buildPrompts, callOpenRouter, callGemini, extractShaderJson } from "../../../api/shader-core.js";
 
 interface ShaderRequest {
   prompt?: string;
@@ -61,7 +61,15 @@ export const handler = async (event: any) => {
       const result = JSON.parse(new TextDecoder().decode(response.body));
       rawContent = result.content?.[0]?.text || result.completion;
     } catch (err) {
-      rawContent = await callOpenRouter(systemPrompt, userMessage);
+      if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length >= 20) {
+        try {
+          rawContent = await callGemini(systemPrompt, userMessage);
+        } catch (geminiError) {
+          rawContent = await callOpenRouter(systemPrompt, userMessage);
+        }
+      } else {
+        rawContent = await callOpenRouter(systemPrompt, userMessage);
+      }
     }
 
     const shaderData = extractShaderJson(rawContent);

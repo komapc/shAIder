@@ -1,7 +1,7 @@
 'use strict';
 
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { buildPrompts, callOpenRouter, extractShaderJson } = require("./shader-core");
+const { buildPrompts, callOpenRouter, callGemini, extractShaderJson } = require("./shader-core");
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -74,8 +74,17 @@ exports.handler = async (event) => {
         rawContent = result.completion;
       }
     } catch (bedrockError) {
-      console.warn("[API] Bedrock failed, trying fallback:", bedrockError.message);
-      rawContent = await callOpenRouter(systemPrompt, userMessage);
+      console.warn("[API] Bedrock failed, trying fallbacks:", bedrockError.message);
+      if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length >= 20) {
+        try {
+          rawContent = await callGemini(systemPrompt, userMessage);
+        } catch (geminiError) {
+          console.warn("[API] Gemini fallback failed, trying OpenRouter:", geminiError.message);
+          rawContent = await callOpenRouter(systemPrompt, userMessage);
+        }
+      } else {
+        rawContent = await callOpenRouter(systemPrompt, userMessage);
+      }
     }
 
     const shaderData = extractShaderJson(rawContent);
