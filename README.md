@@ -38,7 +38,7 @@ To run the project locally, you need to start both the frontend development serv
    ```bash
    node api/local-server.js
    ```
-   *Note: This server runs at `http://localhost:3001` and resolves credentials via AWS Secrets Manager. If AWS credentials are not set up locally, it falls back to OpenRouter.*
+   *Note: This server runs at `http://localhost:3002` and resolves credentials via AWS Secrets Manager. If AWS credentials are not set up locally, it falls back to OpenRouter.*
 
 2. **Start the frontend development server**:
    ```bash
