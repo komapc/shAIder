@@ -41,7 +41,7 @@ npm run dev              # frontend at http://localhost:5173
 ```
 Without Amplify outputs the app falls back to a local API server:
 ```bash
-node api/local-server.js # needs AWS credentials with Bedrock access, or OPENROUTER_API_KEY
+node api/local-server.js # needs AWS credentials with Bedrock access (or OPENROUTER_API_KEY as a local-only fallback)
 ```
 
 | Command | What it does |
@@ -54,7 +54,7 @@ node api/local-server.js # needs AWS credentials with Bedrock access, or OPENROU
 ## Deployment
 Pushing to `main` triggers an Amplify build (`amplify.yml`): backend via `ampx pipeline-deploy`, then the frontend. The Amplify app uses a service role (`amplify-shaider-service-role`) so the pipeline can read CDK bootstrap parameters.
 
-Optional environment variables for the Lambda: `BEDROCK_MODEL_ID` (override the model), `OPENROUTER_API_KEY` (fallback provider, not configured in production).
+Optional environment variable for the Lambda: `BEDROCK_MODEL_ID` (override the model). The Lambda runs on Node.js 22 and talks to Bedrock only.
 
 ## CI
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests: install, lint, unit tests, build, Playwright e2e. It does not deploy; Amplify does.

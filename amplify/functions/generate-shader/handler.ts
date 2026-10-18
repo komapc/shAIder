@@ -1,7 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { enforceRateLimit, clientIp, RateLimitError } from "./rate-limit.js";
-import { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
+import { buildPrompts, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
 
 interface ShaderRequest {
   prompt?: string;
@@ -64,8 +64,8 @@ export const handler = async (event: any) => {
         rawContent = extractText(result);
         if (!rawContent) console.warn("[API] Empty model text, stop_reason:", result.stop_reason);
       } catch (err) {
-        console.warn("[API] Bedrock failed, trying fallback:", err instanceof Error ? err.message : err);
-        rawContent = await callOpenRouter(systemPrompt, userMessage);
+        console.error("[API] Bedrock call failed:", err);
+        throw new Error("The AI service is temporarily unavailable. Please try again.");
       }
 
       const shaderData = extractShaderJson(rawContent);

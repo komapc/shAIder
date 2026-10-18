@@ -1,14 +1,11 @@
-import { type ClientSchema, a, defineData, defineFunction, secret } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/backend';
 
 // Define the function in the same file to avoid persistent module resolution issues in cloud build
 export const generateShader = defineFunction({
   name: 'generate-shader',
   entry: '../functions/generate-shader/handler.ts',
-  environment: {
-    OPENROUTER_API_KEY: secret('OPENROUTER_API_KEY')
-  },
   timeoutSeconds: 60,
-  runtime: 20, // Node.js 20
+  runtime: 22, // Node.js 22
 });
 
 const schema = a.schema({
