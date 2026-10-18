@@ -18,7 +18,7 @@ export const handler = async (event: any) => {
   const client = new BedrockRuntimeClient({ region });
 
   try {
-    if (event.info?.fieldName === "ping") return "ok";
+    if ((event.fieldName ?? event.info?.fieldName) === "ping") return "ok";
 
     // AppSync passes GraphQL arguments in event.arguments; event.body is kept for direct invocation.
     const body: ShaderRequest =
@@ -48,6 +48,7 @@ export const handler = async (event: any) => {
       const result = JSON.parse(new TextDecoder().decode(response.body));
       rawContent = result.content?.[0]?.text || result.completion;
     } catch (err) {
+      console.warn("[API] Bedrock failed, trying fallback:", err instanceof Error ? err.message : err);
       rawContent = await callOpenRouter(systemPrompt, userMessage);
     }
 

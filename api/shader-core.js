@@ -23,7 +23,8 @@ const LIMITS = {
   json: 20000,
 };
 
-const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-haiku-20240307-v1:0";
+// EU cross-region inference profile; Claude 3 Haiku is no longer offered in eu-central-1.
+const DEFAULT_BEDROCK_MODEL = "eu.anthropic.claude-haiku-5-5";
 
 /**
  * Validate and size-limit a client request so an anonymous caller cannot send
