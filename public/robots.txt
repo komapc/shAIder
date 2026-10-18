@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://shader.lipu.dev/sitemap.xml
