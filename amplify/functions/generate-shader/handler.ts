@@ -28,32 +28,40 @@ export const handler = async (event: any) => {
 
     const { systemPrompt, userMessage } = buildPrompts(value);
 
-    let rawContent = "";
-    try {
-      const payload = {
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
-      };
+    // The model occasionally returns JSON without both shaders; retry once before giving up.
+    for (let attempt = 1; ; attempt++) {
+      let rawContent = "";
+      try {
+        const payload = {
+          anthropic_version: "bedrock-2023-05-31",
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+        };
 
-      const command = new InvokeModelCommand({
-        contentType: "application/json",
-        accept: "application/json",
-        modelId: process.env.BEDROCK_MODEL_ID || DEFAULT_BEDROCK_MODEL,
-        body: JSON.stringify(payload),
-      });
+        const command = new InvokeModelCommand({
+          contentType: "application/json",
+          accept: "application/json",
+          modelId: process.env.BEDROCK_MODEL_ID || DEFAULT_BEDROCK_MODEL,
+          body: JSON.stringify(payload),
+        });
 
-      const response = await client.send(command);
-      const result = JSON.parse(new TextDecoder().decode(response.body));
-      rawContent = extractText(result);
-    } catch (err) {
-      console.warn("[API] Bedrock failed, trying fallback:", err instanceof Error ? err.message : err);
-      rawContent = await callOpenRouter(systemPrompt, userMessage);
+        const response = await client.send(command);
+        const result = JSON.parse(new TextDecoder().decode(response.body));
+        rawContent = extractText(result);
+        if (!rawContent) console.warn("[API] Empty model text, stop_reason:", result.stop_reason);
+      } catch (err) {
+        console.warn("[API] Bedrock failed, trying fallback:", err instanceof Error ? err.message : err);
+        rawContent = await callOpenRouter(systemPrompt, userMessage);
+      }
+
+      const shaderData = extractShaderJson(rawContent);
+      if (typeof shaderData.vertexShader === "string" && typeof shaderData.fragmentShader === "string") {
+        return JSON.stringify(shaderData);
+      }
+      console.warn(`[API] Attempt ${attempt}: response without both shaders, keys:`, Object.keys(shaderData).join(","));
+      if (attempt >= 2) throw new Error("The AI response did not contain both shaders. Please try again.");
     }
-
-    const shaderData = extractShaderJson(rawContent);
-    return JSON.stringify(shaderData);
   } catch (error: unknown) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }
