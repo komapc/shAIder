@@ -18,7 +18,11 @@ export const handler = async (event: any) => {
   const client = new BedrockRuntimeClient({ region });
 
   try {
-    const body: ShaderRequest = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    if (event.info?.fieldName === "ping") return "ok";
+
+    // AppSync passes GraphQL arguments in event.arguments; event.body is kept for direct invocation.
+    const body: ShaderRequest =
+      event.arguments ?? (typeof event.body === "string" ? JSON.parse(event.body) : event.body);
     const { error, value } = validateRequest(body as Record<string, unknown>);
     if (error || !value) throw new Error(error ?? "Invalid request");
 

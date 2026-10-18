@@ -12,6 +12,12 @@ export const generateShader = defineFunction({
 });
 
 const schema = a.schema({
+  // AppSync requires a Query root type; a schema with only a mutation fails to deploy.
+  ping: a
+    .query()
+    .returns(a.string())
+    .handler(a.handler.function(generateShader))
+    .authorization((allow) => [allow.publicApiKey()]),
   generateShader: a
     .mutation()
     .arguments({
