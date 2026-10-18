@@ -12,12 +12,8 @@
     "amplify": "ampx"
   },
   "dependencies": {
-    "@aws-amplify/adapter-nextjs": "^1.2.22",
-    "@aws-amplify/auth": "^6.3.16",
     "@aws-amplify/core": "^6.4.0",
     "@aws-amplify/data-schema": "^1.1.0",
-    "@aws-amplify/storage": "^6.3.1",
-    "@aws-amplify/ui-react": "^6.1.13",
     "@aws-sdk/client-bedrock-runtime": "^3.621.0",
     "@aws-sdk/client-secrets-manager": "^3.621.0",
     "@codemirror/lang-cpp": "^6.0.3",

@@ -1,11 +1,11 @@
 'use strict';
 
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { buildPrompts, callOpenRouter, extractShaderJson } = require("./shader-core");
+const { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, DEFAULT_BEDROCK_MODEL } = require("./shader-core");
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
@@ -15,37 +15,21 @@ exports.handler = async (event) => {
   const client = new BedrockRuntimeClient({ region });
 
   try {
-    const body = JSON.parse(event.body || "{}");
-    const {
-      prompt,
-      sceneDescription = "",
-      isRefining = false,
-      currentVertexShader = "",
-      currentFragmentShader = "",
-      currentUniforms = [],
-      currentSceneObjects = [],
-      lastError = "",
-      modelId = "anthropic.claude-3-haiku-20240307-v1:0",
-    } = body;
-
-    if (!prompt && !sceneDescription && !lastError) {
-      return {
-        statusCode: 400,
-        headers: CORS_HEADERS,
-        body: JSON.stringify({ error: "No prompt provided" }),
-      };
+    let body;
+    try {
+      body = JSON.parse(event.body || "{}");
+    } catch {
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: "Invalid JSON" }) };
     }
 
-    const { systemPrompt, userMessage } = buildPrompts({
-      prompt,
-      sceneDescription,
-      isRefining,
-      currentVertexShader,
-      currentFragmentShader,
-      currentUniforms,
-      currentSceneObjects,
-      lastError,
-    });
+    const { error, value } = validateRequest(body);
+    if (error) {
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error }) };
+    }
+
+    // The model is fixed server-side; clients cannot pick a (more expensive) one.
+    const modelId = process.env.BEDROCK_MODEL_ID || DEFAULT_BEDROCK_MODEL;
+    const { systemPrompt, userMessage } = buildPrompts(value);
 
     let rawContent = "";
 
@@ -53,7 +37,7 @@ exports.handler = async (event) => {
       console.log("[API] Attempting Bedrock...");
       const payload = {
         anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 6000,
+        max_tokens: 4000,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
       };

@@ -122,3 +122,21 @@ describe('buildPrompts', () => {
     expect(userMessage).toContain('Maintain current visual effect');
   });
 });
+
+describe('validateRequest', () => {
+  it('accepts a normal prompt and ignores a client-supplied modelId', async () => {
+    const { validateRequest } = await import('./shader-core.js');
+    const { value, error } = validateRequest({ prompt: 'red lava', modelId: 'anthropic.claude-opus-expensive' });
+    expect(error).toBeUndefined();
+    expect(value.prompt).toBe('red lava');
+    expect(value).not.toHaveProperty('modelId');
+  });
+
+  it('rejects empty, oversized and non-string input', async () => {
+    const { validateRequest, LIMITS } = await import('./shader-core.js');
+    expect(validateRequest({}).error).toMatch(/No prompt/);
+    expect(validateRequest({ prompt: 'x'.repeat(LIMITS.prompt + 1) }).error).toMatch(/too long/);
+    expect(validateRequest({ prompt: 42 }).error).toMatch(/must be a string/);
+    expect(validateRequest({ prompt: 'a', currentUniforms: JSON.stringify(Array(5000).fill({ name: 'u', value: 1 })) }).error).toMatch(/too large/);
+  });
+});

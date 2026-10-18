@@ -6,23 +6,24 @@ export const generateStandaloneHtml = (
   uniforms: Uniform[],
   sceneObjects: SceneObject[]
 ): string => {
-  // Convert uniforms to a format Three.js can understand in a simple script
-  const uniformsJs = uniforms.reduce((acc, u) => {
-    if (u.type === 'color') {
-      acc[u.name] = { value: `new THREE.Color('${u.value}')` };
-    } else if (u.type === 'texture') {
-      acc[u.name] = { value: `new THREE.TextureLoader().load('${u.value}')` };
-    } else {
-      acc[u.name] = { value: u.value };
-    }
-    return acc;
-  }, {} as Record<string, { value: unknown }>);
+  // Embed everything as JSON string literals; '<' is escaped so nothing can
+  // close the surrounding <script> tag.
+  const lit = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c');
 
-  const uniformsString = JSON.stringify(uniformsJs, null, 2)
-    .replace(/"value": "new THREE\.Color\('(.*?)'\)"/g, '"value": new THREE.Color(\'$1\')')
-    .replace(/"value": "new THREE\.TextureLoader\(\)\.load\('(.*?)'\)"/g, '"value": new THREE.TextureLoader().load(\'$1\')');
+  const uniformsString =
+    '{' +
+    uniforms
+      .map((u) => {
+        let value: string;
+        if (u.type === 'color') value = `new THREE.Color(${lit(String(u.value))})`;
+        else if (u.type === 'texture') value = `new THREE.TextureLoader().load(${lit(String(u.value))})`;
+        else value = lit(u.value);
+        return `${lit(u.name)}: { value: ${value} }`;
+      })
+      .join(',\n') +
+    '}';
 
-  const sceneObjectsString = JSON.stringify(sceneObjects, null, 2);
+  const sceneObjectsString = lit(sceneObjects);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -62,8 +63,8 @@ export const generateStandaloneHtml = (
         let scene, camera, renderer, controls;
         let materials = [];
 
-        const vertexShader = \`${vertexShader.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
-        const fragmentShader = \`${fragmentShader.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+        const vertexShader = ${lit(vertexShader)};
+        const fragmentShader = ${lit(fragmentShader)};
         const uniformsConfig = ${uniformsString};
         const sceneObjects = ${sceneObjectsString};
 

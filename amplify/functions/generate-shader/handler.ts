@@ -1,5 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { buildPrompts, callOpenRouter, extractShaderJson } from "../../../api/shader-core.js";
+import { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
 
 interface ShaderRequest {
   prompt?: string;
@@ -19,27 +19,10 @@ export const handler = async (event: any) => {
 
   try {
     const body: ShaderRequest = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const {
-      prompt = "",
-      sceneDescription = "",
-      isRefining = false,
-      currentVertexShader = "",
-      currentFragmentShader = "",
-      currentUniforms = [],
-      currentSceneObjects = [],
-      lastError = "",
-    } = body;
+    const { error, value } = validateRequest(body as Record<string, unknown>);
+    if (error || !value) throw new Error(error ?? "Invalid request");
 
-    const { systemPrompt, userMessage } = buildPrompts({
-      prompt,
-      sceneDescription,
-      isRefining,
-      currentVertexShader,
-      currentFragmentShader,
-      currentUniforms,
-      currentSceneObjects,
-      lastError,
-    });
+    const { systemPrompt, userMessage } = buildPrompts(value);
 
     let rawContent = "";
     try {
@@ -53,7 +36,7 @@ export const handler = async (event: any) => {
       const command = new InvokeModelCommand({
         contentType: "application/json",
         accept: "application/json",
-        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+        modelId: process.env.BEDROCK_MODEL_ID || DEFAULT_BEDROCK_MODEL,
         body: JSON.stringify(payload),
       });
 
