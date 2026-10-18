@@ -116,7 +116,10 @@ const App: React.FC = () => {
           }) as any;
 
           if (response.errors) throw new Error(response.errors[0].message);
-          data = JSON.parse(response.data?.generateShader || "{}");
+          // Amplify Gen2 returns a string-typed custom mutation result directly in `data`
+          const payload = typeof response.data === 'string' ? response.data : response.data?.generateShader;
+          if (!payload) throw new Error('Empty response from the generation API. Please try again.');
+          data = JSON.parse(payload);
       } else {
           // Fallback to local node server
           const response = await fetch('/api/generate-shader', {
