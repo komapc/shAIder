@@ -1,5 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
+import { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
 
 interface ShaderRequest {
   prompt?: string;
@@ -46,7 +46,7 @@ export const handler = async (event: any) => {
 
       const response = await client.send(command);
       const result = JSON.parse(new TextDecoder().decode(response.body));
-      rawContent = result.content?.[0]?.text || result.completion;
+      rawContent = extractText(result);
     } catch (err) {
       console.warn("[API] Bedrock failed, trying fallback:", err instanceof Error ? err.message : err);
       rawContent = await callOpenRouter(systemPrompt, userMessage);

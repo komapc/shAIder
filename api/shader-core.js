@@ -15,6 +15,18 @@ const OPENROUTER_MODELS = [
   "meta-llama/llama-3.1-8b-instruct:free",
 ];
 
+/**
+ * Concatenate the text blocks of a Bedrock/Anthropic response. Newer models put a
+ * "thinking" block first, so content[0].text cannot be relied on.
+ * @param {{content?: Array<{type?: string, text?: string}>, completion?: string}} result
+ */
+function extractText(result) {
+  if (Array.isArray(result?.content)) {
+    return result.content.filter((b) => b && b.type === 'text' && b.text).map((b) => b.text).join('');
+  }
+  return result?.completion || '';
+}
+
 const LIMITS = {
   prompt: 2000,
   sceneDescription: 4000,
@@ -268,4 +280,4 @@ function extractShaderJson(rawContent) {
   return shaderData;
 }
 
-module.exports = { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, DEFAULT_BEDROCK_MODEL, LIMITS };
+module.exports = { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL, LIMITS };

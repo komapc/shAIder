@@ -140,3 +140,12 @@ describe('validateRequest', () => {
     expect(validateRequest({ prompt: 'a', currentUniforms: JSON.stringify(Array(5000).fill({ name: 'u', value: 1 })) }).error).toMatch(/too large/);
   });
 });
+
+describe('extractText', () => {
+  it('skips a leading thinking block and joins text blocks', async () => {
+    const { extractText } = await import('./shader-core.js');
+    expect(extractText({ content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: '{"a":' }, { type: 'text', text: '1}' }] })).toBe('{"a":1}');
+    expect(extractText({ completion: 'x' })).toBe('x');
+    expect(extractText({})).toBe('');
+  });
+});

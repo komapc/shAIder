@@ -1,7 +1,7 @@
 'use strict';
 
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, DEFAULT_BEDROCK_MODEL } = require("./shader-core");
+const { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL } = require("./shader-core");
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -52,11 +52,7 @@ exports.handler = async (event) => {
       const response = await client.send(command);
       const result = JSON.parse(new TextDecoder().decode(response.body));
 
-      if (result.content && Array.isArray(result.content)) {
-        rawContent = result.content[0].text;
-      } else if (result.completion) {
-        rawContent = result.completion;
-      }
+      rawContent = extractText(result);
     } catch (bedrockError) {
       console.warn("[API] Bedrock failed, trying fallback:", bedrockError.message);
       rawContent = await callOpenRouter(systemPrompt, userMessage);
