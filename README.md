@@ -30,7 +30,7 @@ Amazon Bedrock — Claude Haiku 5.5 (EU inference profile eu.anthropic.claude-ha
 - The AppSync API uses a **public API key**, which is embedded in the frontend bundle by design (anyone can read it). It only allows calling `generateShader` and `ping`; it grants no access to other AWS resources.
 - The key expires after 365 days; every deployment renews the expiry.
 - The Lambda enforces input limits (prompt 2000, scene description 4000, shader 20 000 characters), ignores any client-supplied model ID, and may call only the one Bedrock model.
-- There is no per-user rate limiting yet; cost is bounded only by AWS budgets.
+- Rate limiting: 60 requests per hour per client IP and 3000 per day overall, counted in a DynamoDB table (`RATE_LIMIT_TABLE`, TTL-expired). Over the limit the API returns "Rate limit exceeded". If the limiter itself is unreachable the request is let through and a warning is logged.
 
 ## Local development
 Requirements: Node.js 24 (what CI uses; 20+ works).
@@ -64,5 +64,5 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on 
 - [x] Bedrock integration, refine and auto-fix
 - [x] Standalone HTML export
 - [x] Deployment on Amplify with a custom domain
-- [ ] Rate limiting for the public API
+- [x] Rate limiting for the public API
 - [ ] Shadow support and PBR material refinement

@@ -1,6 +1,7 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Stack } from 'aws-cdk-lib';
+import { Stack, RemovalPolicy } from 'aws-cdk-lib';
+import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { data, generateShader } from './data/resource';
 
 const backend = defineBackend({
@@ -19,3 +20,14 @@ backend.generateShader.resources.lambda.addToRolePolicy(
     ],
   })
 );
+
+// Request counters for rate limiting (per-IP hourly, global daily); items expire via TTL
+const rateLimitStack = backend.createStack('RateLimit');
+const rateLimitTable = new Table(rateLimitStack, 'RateLimitTable', {
+  partitionKey: { name: 'pk', type: AttributeType.STRING },
+  billingMode: BillingMode.PAY_PER_REQUEST,
+  timeToLiveAttribute: 'expiresAt',
+  removalPolicy: RemovalPolicy.DESTROY,
+});
+rateLimitTable.grant(backend.generateShader.resources.lambda, 'dynamodb:UpdateItem');
+backend.generateShader.addEnvironment('RATE_LIMIT_TABLE', rateLimitTable.tableName);

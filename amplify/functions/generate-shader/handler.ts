@@ -1,4 +1,6 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { enforceRateLimit, clientIp, RateLimitError } from "./rate-limit.js";
 import { buildPrompts, callOpenRouter, extractShaderJson, validateRequest, extractText, DEFAULT_BEDROCK_MODEL } from "../../../api/shader-core.js";
 
 interface ShaderRequest {
@@ -25,6 +27,17 @@ export const handler = async (event: any) => {
       event.arguments ?? (typeof event.body === "string" ? JSON.parse(event.body) : event.body);
     const { error, value } = validateRequest(body as Record<string, unknown>);
     if (error || !value) throw new Error(error ?? "Invalid request");
+
+    // Fail open if the limiter itself is unavailable; the budget alerts remain as a backstop.
+    const table = process.env.RATE_LIMIT_TABLE;
+    if (table) {
+      try {
+        await enforceRateLimit(new DynamoDBClient({ region }), table, clientIp(event));
+      } catch (err) {
+        if (err instanceof RateLimitError) throw err;
+        console.warn("[API] Rate limiter unavailable:", err instanceof Error ? err.message : err);
+      }
+    }
 
     const { systemPrompt, userMessage } = buildPrompts(value);
 
