@@ -147,7 +147,15 @@ const App: React.FC = () => {
           if (!response.ok) throw new Error(data.message || 'API request failed');
       }
 
-      setShaders(data.vertexShader, data.fragmentShader, data.uniforms, data.sceneObjects);
+      if (typeof data.vertexShader !== 'string' || typeof data.fragmentShader !== 'string') {
+        throw new Error('The AI response did not contain both shaders. Please try again.');
+      }
+      setShaders(
+        data.vertexShader,
+        data.fragmentShader,
+        Array.isArray(data.uniforms) ? data.uniforms : [],
+        Array.isArray(data.sceneObjects) ? data.sceneObjects : [],
+      );
       addLog(`${logPrefix}Generation received. Waiting for compilation...`);
 
       // Wait two render frames for Three.js to compile and invoke onShaderError,
