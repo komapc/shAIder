@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Source of public/og.png. Render:
+     google-chrome --headless=new --hide-scrollbars --window-size=1200,630 --user-data-dir=$(mktemp -d) \
+       --virtual-time-budget=3000 --screenshot=public/og.png "file://$PWD/scripts/og.html" -->
+<html lang="en"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1200px; height: 630px; overflow: hidden; position: relative; background: #0b0d14; color: #f2f4fa;
+    font-family: 'DejaVu Sans', sans-serif; }
+  canvas { position: absolute; right: 0; top: 0; }
+  h1 { position: absolute; left: 68px; top: 72px; margin: 0; font-size: 76px; letter-spacing: -2px; }
+  h1 em { font-style: normal; color: #ffa24d; }
+  .sub { position: absolute; left: 70px; top: 176px; width: 560px; margin: 0; font-size: 29px; line-height: 1.32; color: #c0c6d6; }
+  .prompt { position: absolute; left: 70px; top: 306px; width: 530px; padding: 16px 20px; border-radius: 12px; background: #171b27; border: 1px solid #333a4d; font-size: 22px; color: #e5e8f2; }
+  .prompt small { display: block; margin-bottom: 7px; font-size: 15px; letter-spacing: 2px; color: #7f88a0; }
+  pre { position: absolute; left: 70px; top: 424px; margin: 0; font: 19px/1.45 'DejaVu Sans Mono', monospace; color: #8fa0c4; }
+  pre b { font-weight: 400; color: #ffa24d; }
+  .url { position: absolute; left: 70px; bottom: 34px; margin: 0; font-size: 22px; color: #7f88a0; }
+</style></head><body>
+  <canvas id="c" width="640" height="630"></canvas>
+  <h1>sh<em>AI</em>der</h1>
+  <p class="sub">Describe a material in words. AI writes the GLSL and renders it live.</p>
+  <div class="prompt"><small>PROMPT</small>molten copper with glowing veins</div>
+  <pre><b>float</b> v = fbm(p * 3.0 + uTime);
+color = mix(copper, glow, v);</pre>
+  <p class="url">shader.lipu.dev</p>
+<script>
+// A CPU sketch of the prompt's material, so the render needs no GPU.
+const c = document.getElementById('c'), x = c.getContext('2d'), W = c.width, H = c.height, img = x.createImageData(W, H);
+const fr = (v) => v - Math.floor(v), mix = (a, b, t) => a + (b - a) * t;
+const h3 = (a, b, d) => fr(Math.sin(a * 127.1 + b * 311.7 + d * 74.7) * 43758.5453);
+function noise(a, b, d) {
+  const i = Math.floor(a), j = Math.floor(b), k = Math.floor(d);
+  const s = (t) => t * t * (3 - 2 * t), u = s(a - i), v = s(b - j), w = s(d - k);
+  return mix(mix(mix(h3(i, j, k), h3(i + 1, j, k), u), mix(h3(i, j + 1, k), h3(i + 1, j + 1, k), u), v),
+    mix(mix(h3(i, j, k + 1), h3(i + 1, j, k + 1), u), mix(h3(i, j + 1, k + 1), h3(i + 1, j + 1, k + 1), u), v), w);
+}
+const fbm = (a, b, d) => { let f = 0, g = .5; for (let n = 0; n < 5; n++) { f += g * noise(a, b, d); a *= 2.03; b *= 2.03; d *= 2.03; g /= 2; } return f; };
+const cx = 340, cy = 315, R = 262, L = [-.55, -.6, .58];
+for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+  const nx = (px - cx) / R, ny = (py - cy) / R, r2 = nx * nx + ny * ny, o = (py * W + px) * 4;
+  let col;
+  if (r2 <= 1) {
+    const nz = Math.sqrt(1 - r2);
+    const warp = fbm(nx * 2 + 4, ny * 2 + 1, nz * 2);
+    const vein = 1 - Math.min(1, Math.abs(fbm(nx * 3 + warp * 2.2, ny * 3 - warp * 1.7, nz * 3) - .5) * 11);
+    const dif = Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+    const spec = Math.pow(Math.max(0, 2 * dif * nz - L[2]), 34);
+    const hot = Math.pow(vein, 2.2);
+    col = [34 + 150 * dif, 15 + 72 * dif, 9 + 34 * dif].map((v) => v * (.5 + warp));
+    col = [col[0] + 255 * hot, col[1] + 150 * hot, col[2] + 36 * hot].map((v, n) => v + [255, 215, 180][n] * spec * .75);
+    const edge = Math.min(1, (1 - Math.sqrt(r2)) * R / 1.5);
+    col = col.map((v) => mix(11, v, edge));
+  } else {
+    const glow = Math.exp(-(Math.sqrt(r2) - 1) * 10) * .2;
+    col = [11 + 255 * glow, 13 + 110 * glow, 20 + 25 * glow];
+  }
+  img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255;
+}
+x.putImageData(img, 0, 0);
+</script></body></html>
