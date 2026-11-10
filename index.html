@@ -24,8 +24,35 @@
     </script>
   </head>
   <body>
-    <noscript><h1>shAIder</h1><p>Describe a 3D material or scene in words; an AI writes the GLSL shader and renders it live. Requires JavaScript.</p></noscript>
+    <noscript><p class="p-6 text-gray-300">The live editor needs JavaScript. Scroll down to read what shAIder does.</p></noscript>
     <div id="root"></div>
+    <section id="about" class="bg-[#0a0a0a] text-gray-400 border-t border-gray-800">
+      <div class="max-w-3xl mx-auto px-6 py-12 text-sm leading-relaxed space-y-4">
+        <h1 class="text-2xl font-bold text-white">shAIder: an AI shader generator, from text to GLSL</h1>
+        <p>
+          Describe a material in plain words, for example &ldquo;molten lava with glowing cracks&rdquo; or
+          &ldquo;a blue hologram with moving scanlines&rdquo;, and shAIder writes the vertex and fragment
+          shaders for you. The result is a WebGL shader from a prompt, compiled and rendered live on a
+          sphere, cube, torus or plane right in your browser.
+        </p>
+        <h2 class="text-lg font-semibold text-gray-200 pt-2">How it works</h2>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Write one prompt for the material and, if you like, a second one for the scene layout.</li>
+          <li>The AI returns GLSL code. If it does not compile, the error goes back to the model and it fixes the shader on its own.</li>
+          <li>Sliders appear for the shader&rsquo;s uniforms, so you can tune colours, speed and scale without touching code.</li>
+          <li>Edit the GLSL by hand in the built-in editor, or ask for a refinement of the current result.</li>
+        </ul>
+        <h2 class="text-lg font-semibold text-gray-200 pt-2">Export to Three.js</h2>
+        <p>
+          When you are happy with the look, export it as a standalone HTML page that runs the shader with
+          Three.js. Open it locally, or copy the GLSL into your own Three.js, WebGL or game project.
+        </p>
+        <p>
+          shAIder is free and needs no account. The source code is on
+          <a href="https://github.com/komapc/shAIder" class="text-blue-400 hover:text-blue-300" rel="noopener">GitHub</a>.
+        </p>
+      </div>
+    </section>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
