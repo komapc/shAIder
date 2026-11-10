@@ -21,7 +21,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  overflow: hidden;
+  /* The app fills the first screen; the static #about section below it scrolls into view. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #root {
