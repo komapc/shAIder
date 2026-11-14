@@ -66,3 +66,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on 
 - [x] Deployment on Amplify with a custom domain
 - [x] Rate limiting for the public API
 - [ ] Shadow support and PBR material refinement
+
+## License
+
+MIT ([`LICENSE`](LICENSE)).
