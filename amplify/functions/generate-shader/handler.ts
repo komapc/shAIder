@@ -20,12 +20,7 @@ export const handler = async (event: any) => {
   const client = new BedrockRuntimeClient({ region });
 
   try {
-    if ((event.fieldName ?? event.info?.fieldName) === "ping") {
-      // TEMP diagnostic (security audit): which headers carry the real client IP. Remove after.
-      const h = event.request?.headers ?? {};
-      console.log("[diag] xff=%s names=%s", h["x-forwarded-for"], Object.keys(h).join(","));
-      return "ok";
-    }
+    if ((event.fieldName ?? event.info?.fieldName) === "ping") return "ok";
 
     // AppSync passes GraphQL arguments in event.arguments; event.body is kept for direct invocation.
     const body: ShaderRequest =

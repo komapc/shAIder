@@ -53,8 +53,16 @@ describe("enforceRateLimit", () => {
 });
 
 describe("clientIp", () => {
-  it("takes the first X-Forwarded-For entry", () => {
-    expect(clientIp({ request: { headers: { "x-forwarded-for": "9.9.9.9, 10.0.0.1" } } })).toBe("9.9.9.9");
+  const xff = (v: string) => clientIp({ request: { headers: { "x-forwarded-for": v } } });
+  it("takes the client entry appended before the CloudFront edge", () => {
+    expect(xff("9.9.9.9, 15.158.250.112")).toBe("9.9.9.9");
+  });
+  it("ignores caller-supplied (spoofed) entries", () => {
+    expect(xff("1.2.3.4,9.9.9.9,15.158.250.112")).toBe("9.9.9.9");
+    expect(xff("1.2.3.4, 5.6.7.8, 9.9.9.9, 15.158.250.100")).toBe("9.9.9.9");
+  });
+  it("uses a lone entry as-is", () => {
+    expect(xff("9.9.9.9")).toBe("9.9.9.9");
   });
   it("falls back to unknown", () => {
     expect(clientIp({})).toBe("unknown");

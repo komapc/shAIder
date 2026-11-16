@@ -55,8 +55,19 @@ export async function enforceRateLimit(
   await hit(db, table, `global#${day}`, limits.perDay, (day + 2) * 86400);
 }
 
-/** First address of X-Forwarded-For (AppSync puts the client there), else "unknown". */
+/**
+ * Client address from X-Forwarded-For. AppSync's CloudFront front door appends
+ * "<client>, <edge>" to whatever the caller sent, so everything left of the last
+ * two entries is caller-controlled. Measured 2026-11-16 (security audit):
+ *   no XFF sent        -> "<client>,<edge>"
+ *   "1.2.3.4" sent     -> "1.2.3.4,<client>,<edge>"
+ * So the real client is the second entry from the right.
+ */
 export function clientIp(event: { request?: { headers?: Record<string, string | undefined> } }): string {
-  const xff = event.request?.headers?.["x-forwarded-for"];
-  return xff?.split(",")[0]?.trim() || "unknown";
+  const parts = (event.request?.headers?.["x-forwarded-for"] ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) return parts[parts.length - 2];
+  return parts[0] || "unknown";
 }
