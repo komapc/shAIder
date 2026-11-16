@@ -6,8 +6,12 @@ const { loadSecrets } = require("./secrets");
 
 const app = express();
 const port = 3001;
+// Dev-only server: listen on loopback only, and only accept browser requests
+// from local origins (the Vite dev server proxies /api here).
+const host = "127.0.0.1";
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 
-app.use(cors());
+app.use(cors({ origin: LOCAL_ORIGIN }));
 app.use(bodyParser.json());
 
 // Proxy route that mimics the Lambda API Gateway behavior
@@ -32,7 +36,7 @@ app.post("/api/generate-shader", async (req, res) => {
   // Load secrets from AWS Secrets Manager before starting
   await loadSecrets();
 
-  app.listen(port, () => {
-    console.log(`Local shAIder API server running at http://localhost:${port}`);
+  app.listen(port, host, () => {
+    console.log(`Local shAIder API server running at http://${host}:${port}`);
   });
 })();
