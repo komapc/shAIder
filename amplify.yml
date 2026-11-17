@@ -11,6 +11,9 @@ frontend:
   phases:
     preBuild:
       commands:
+        # Vite 8 needs Node ^20.19 || >=22.12; don't rely on the build image default.
+        - nvm install 22
+        - node -v
         - npm ci
     build:
       commands:
