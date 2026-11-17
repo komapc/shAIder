@@ -143,6 +143,8 @@ const Scene: React.FC = () => {
 
   useEffect(() => {
     const prev = gl.debug.onShaderError;
+    // three.js renderer is an external mutable object; hooking its debug callback is the intended R3F pattern.
+    // eslint-disable-next-line react-hooks/immutability
     gl.debug.onShaderError = (glCtx, _program, vertShader, fragShader) => {
       const vertLog = glCtx.getShaderInfoLog(vertShader) || '';
       const fragLog = glCtx.getShaderInfoLog(fragShader) || '';

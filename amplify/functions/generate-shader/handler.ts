@@ -65,7 +65,7 @@ export const handler = async (event: any) => {
         if (!rawContent) console.warn("[API] Empty model text, stop_reason:", result.stop_reason);
       } catch (err) {
         console.error("[API] Bedrock call failed:", err);
-        throw new Error("The AI service is temporarily unavailable. Please try again.");
+        throw new Error("The AI service is temporarily unavailable. Please try again.", { cause: err });
       }
 
       const shaderData = extractShaderJson(rawContent);
@@ -76,6 +76,6 @@ export const handler = async (event: any) => {
       if (attempt >= 2) throw new Error("The AI response did not contain both shaders. Please try again.");
     }
   } catch (error: unknown) {
-    throw new Error(error instanceof Error ? error.message : String(error));
+    throw new Error(error instanceof Error ? error.message : String(error), { cause: error });
   }
 };
