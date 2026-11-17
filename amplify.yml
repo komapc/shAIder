@@ -3,7 +3,7 @@ backend:
   phases:
     build:
       commands:
-        - npm install
+        - npm ci
         - export CDK_DISABLE_VERSION_CHECK=true
         - export CDK_BOOTSTRAP_QUALIFIER=shaid
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
@@ -11,7 +11,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm ci
     build:
       commands:
         - npm run build
